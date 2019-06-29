@@ -3,38 +3,41 @@
 # Revision History:
 #   Julian Sanders  25 Jun 2019 Inital Revision
 #   Julian Sanders  26 Jun 2019 Added s-bends
+#	Julian Sanders	28 Jun 2019 Debugging and documentation
 
 import math
 import numpy as np
 import pya
-from constants import *
+from pic_component_library.constants import *
 
 def s_bend_shallow_curve(a, b, x):
     '''
-    Function defining the curve used for the s bend
+    Function defining the curve used for the shallow s-bend.
 
     Args:
-        a - height of the s-bend
+        a - height of the s-bend (also function's value at its local extrema)
         b - slope of the bend at x = 0
         x - position along x axis
 
     Return
         Value of the function at x
+        <float>
     '''
     return (4 * a * x)(b + 1 - np.abs(x)) / ((b + 1) ** 2)
     
 
 def s_bend_shallow_curve_length(a, b):
     '''
-    Function defining the curve used for the s bend
+    Gives the path length of the curve bewteen it extrema given the curve 
+    parameters supplied to 's_bend_shallow_curve'.
 
     Args:
-        a - height of the s-bend
-        b - slope of the bend at x = 0
-        x - position along x axis
+        a: height of the s-bend (also function's value at its local extrema)
+        b: slope of the bend at x = 0
 
-    Return
+    Return:
         Length of the curve between the curve's extrema
+        <float>
     '''
     p = (b + 1) / 4
     q = 2 * np.sqrt(1 + ((4 * a**2) / ((1 + b)**2)))
@@ -45,15 +48,18 @@ def s_bend_shallow_curve_length(a, b):
 
 def s_bend_shallow_length(height, length):
     '''
-    Function defining the curve used for the s bend
+    Gives the path length of the curve bewteen it extrema given the curve 
+    parameters supplied to 's_bend_shallow'.
 
     Args:
-        a - height of the s-bend
-        b - slope of the bend at x = 0
-        x - position along x axis
+        height:	height of the s-bend
 
-    Return
+        length: distance between curve's extrema. Corresponds to horizontal
+        		length of the s-bend's layout.
+
+    Return:
         Length of the curve between the curve's extrema
+        <float>
     '''
     return s_bend_shallow_curve_length(height, length - 1)
 
@@ -64,18 +70,27 @@ def s_bend_shallow(layout, height, length, width=WIDTH, n_pts=100):
 
     Args:
         layout: Layout object for instantiation
-                pya.Layout object
+                <pya.Layout object>
 
         height: Distance between ports in direction perpendicular to
                 port direction
-                float
+                <float>
 
-        length: Radius of corner arcs
-                float
+        length: Distance between ports in direction parallel to
+                port direction
+                <float>
+
+        width:  Width of the path
+                <float>
+                (default: constants.WIDTH == 0.5)
+
+        n_pts:	Number of points defining the path
+        		<int>
+        		(default: 100)
 
     Return:
-        path: The s-bend path
-              pya.DPath object
+        The s-bend path
+        pya.DPath object
 
     '''
     x = np.linspace(0, length, n_pts)
@@ -90,37 +105,56 @@ def s_bend_shallow(layout, height, length, width=WIDTH, n_pts=100):
     return pya.DPath(points, width)
 
 
-def s_bend_steep(layout, length=0, width=WIDTH, bend_radius=BEND_RADIUS, n_pts=None, 
-    seg_length=SEG_LENGTH):
+def s_bend_steep(layout, length=0, width=WIDTH, bend_radius=BEND_RADIUS, 
+	n_pts='auto', seg_length=SEG_LENGTH):
     '''
     Generates a path in the shape of an s-bend. Origin at the lower left port.
     Looks like this, but with rounded corners:
 
-                 ---------------
-                 |
-                 |
-                 |
-    --------------
+               ------------
+               |
+               |
+               |
+    ------------
 
     Args:
-        layout:         Layout object for instantiation
-                        pya.Layout object
+        layout: 		Layout object for instantiation
+                		<pya.Layout object>
 
         length:         Length of straight segment in middle of the s-bend
-                        float
+                        <float>
+                        (default: 0)
+
+        width:  		Width of the path
+                		<float>
+                		(default: constants.WIDTH == 0.5)
 
         bend_radius:    Radius of corner arcs
-                        float
+                        <float>
+                        (default: constants.BEND_RADIUS == 10.0)
+
+        n_pts:			Number of points per full circle to use when rounding
+        				corners. If 'auto', this is computed based on the
+        				value of 'seg_length'.
+        				<int or 'auto'>
+        				(default: 'auto')
+
+        seg_length:		When rounding corners, gives the distance between the
+        				points defining the arc and sets n_pts appropriately.
+        				Only used if n_pts == 'auto'.
+        				<float>
+        				(default: constants.SEG_LEGNTH == 1.0)
 
     Return:
-        path: The s-bend path
-              pya.DPath object
+        The s-bend path
+        <pya.DPath object>
     '''
-    points = [pya.DPoint(0, 0)]   # init a list of points
-
-    points.append(pya.DPoint(bend_radius, 0))
-    points.append(pya.DPoint(bend_radius, length + 2 * bend_radius))
-    points.append(pya.DPoint(2 * bend_radius, length + 2 * bend_radius))
+    points = [
+    	pya.DPoint(0,               0                       ),
+    	pya.DPoint(bend_radius,     0                       ),
+    	pya.DPoint(bend_radius,     length + 2 * bend_radius),
+    	pya.DPoint(2 * bend_radius, length + 2 * bend_radius)
+	]
 
     return path(layout, points, width=width, bend_radius=bend_radius,
         n_pts=n_pts, seg_length=seg_length)
@@ -132,16 +166,35 @@ def path(layout, points, width=WIDTH, bend_radius=BEND_RADIUS, n_pts='auto',
     Generates a path with rounded corners.
 
     Args:
-        layout: Layout object for instantiation
-                pya.Layout object
-        points: Points of verticies of manhattan path
-                list of 2-tuples (or 2 x n array-like) of ints
-        width:  Width of the path
-                float
+        layout: 		Layout object for instantiation
+                		<pya.Layout object>
+
+        points: 		Points of verticies of manhattan path
+               		 	<list of 2-tuples (or 2 x n array-like) of ints>
+
+        width:  		Width of the path
+                		<float>
+                		(default: constants.WIDTH == 0.5)
+
+        bend_radius:    Radius of corner arcs
+                        <float>
+                        (default: constants.BEND_RADIUS == 10.0)
+
+        n_pts:			Number of points per full circle to use when rounding
+        				corners. If 'auto', this is computed based on the
+        				value of 'seg_length'.
+        				<int or 'auto'>
+        				(default: 'auto')
+
+        seg_length:		When rounding corners, gives the distance between the
+        				points defining the arc and sets n_pts appropriately.
+        				Only used if n_pts == 'auto'.
+        				<float>
+        				(default: constants.SEG_LEGNTH == 1.0)
 
     Return:
-        path: The rounded path
-              pya.DPath object
+        The rounded path
+        pya.DPath object
 
     '''
     # Compute number of points to keep the distance bewteen points on the
@@ -150,12 +203,10 @@ def path(layout, points, width=WIDTH, bend_radius=BEND_RADIUS, n_pts='auto',
         n_pts = 2 * math.pi * bend_radius / seg_length
 
     # If elements of 'points' aren't DPoints, try to convert them.
-    if points[0].is_instance(pya.DPoint) == False:
+    if isinstance(points[0], pya.DPoint) == False:
         for point, idx in enumerate(points):
             points[idx] = pya.DPoint(p[0], p[1])
 
     path = pya.DPath(points, width)
 
-    path = path.round_corners(bend_radius, n_pts, layout.dbu)
-
-    return path
+    return path.round_corners(bend_radius, n_pts, layout.dbu)
