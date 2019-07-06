@@ -1,14 +1,16 @@
 # This file contains functions for generating various photonic waveguide paths
 # in KLayout. 
 # Revision History:
-#   Julian Sanders  25 Jun 2019 Inital Revision
-#   Julian Sanders  26 Jun 2019 Added s-bends
-#	Julian Sanders	28 Jun 2019 Debugging and documentation
+# 25 Jun 2019   Julian Sanders  Inital Revision
+# 26 Jun 2019   Julian Sanders  Added s-bends
+# 28 Jun 2019   Julian Sanders  Debugging and documentation
+# 03 Jun 2019   Julian Sanders  Updated constants to be lowercase
+# 05 Jul 2019   Julian Sanders  Updated for new package name 'chickpea'.
 
 import math
 import numpy as np
 import pya
-from pic_component_library.constants import *
+from chickpea.constants import *
 
 def s_bend_shallow_curve(a, b, x):
     '''
@@ -64,7 +66,7 @@ def s_bend_shallow_length(height, length):
     return s_bend_shallow_curve_length(height, length - 1)
 
 
-def s_bend_shallow(layout, height, length, width=WIDTH, n_pts=100):
+def s_bend_shallow(layout, height, length, wg_width=wg_width, n_pts=100):
     '''
     Generates a shallow s-bend path.
 
@@ -80,9 +82,9 @@ def s_bend_shallow(layout, height, length, width=WIDTH, n_pts=100):
                 port direction
                 <float>
 
-        width:  Width of the path
+        wg_width:  Width of the path
                 <float>
-                (default: constants.WIDTH == 0.5)
+                (default: constants.wg_width == 0.5)
 
         n_pts:	Number of points defining the path
         		<int>
@@ -102,11 +104,11 @@ def s_bend_shallow(layout, height, length, width=WIDTH, n_pts=100):
     for i in range(n_pts):
         points.append(DPoint(x[i], y[i]))
 
-    return pya.DPath(points, width)
+    return pya.DPath(points, wg_width)
 
 
-def s_bend_steep(layout, length=0, width=WIDTH, bend_radius=BEND_RADIUS, 
-	n_pts='auto', seg_length=SEG_LENGTH):
+def s_bend_steep(layout, length=0, wg_width=wg_width, bend_radius=bend_radius, 
+	n_pts='auto', seg_length=seg_length):
     '''
     Generates a path in the shape of an s-bend. Origin at the lower left port.
     Looks like this, but with rounded corners:
@@ -125,13 +127,13 @@ def s_bend_steep(layout, length=0, width=WIDTH, bend_radius=BEND_RADIUS,
                         <float>
                         (default: 0)
 
-        width:  		Width of the path
+        wg_width:  		Width of the path
                 		<float>
-                		(default: constants.WIDTH == 0.5)
+                		(default: constants.wg_width == 0.5)
 
         bend_radius:    Radius of corner arcs
                         <float>
-                        (default: constants.BEND_RADIUS == 10.0)
+                        (default: constants.bend_radius == 10.0)
 
         n_pts:			Number of points per full circle to use when rounding
         				corners. If 'auto', this is computed based on the
@@ -156,12 +158,12 @@ def s_bend_steep(layout, length=0, width=WIDTH, bend_radius=BEND_RADIUS,
     	pya.DPoint(2 * bend_radius, length + 2 * bend_radius)
 	]
 
-    return path(layout, points, width=width, bend_radius=bend_radius,
+    return path(layout, points, wg_width=wg_width, bend_radius=bend_radius,
         n_pts=n_pts, seg_length=seg_length)
 
 
-def path(layout, points, width=WIDTH, bend_radius=BEND_RADIUS, n_pts='auto', 
-    seg_length=SEG_LENGTH):
+def path(layout, points, wg_width=wg_width, bend_radius=bend_radius, n_pts='auto', 
+    seg_length=seg_length):
     '''
     Generates a path with rounded corners.
 
@@ -172,13 +174,13 @@ def path(layout, points, width=WIDTH, bend_radius=BEND_RADIUS, n_pts='auto',
         points: 		Points of verticies of manhattan path
                		 	<list of 2-tuples (or 2 x n array-like) of ints>
 
-        width:  		Width of the path
+        wg_width:  		Width of the path
                 		<float>
-                		(default: constants.WIDTH == 0.5)
+                		(default: constants.wg_width == 0.5)
 
         bend_radius:    Radius of corner arcs
                         <float>
-                        (default: constants.BEND_RADIUS == 10.0)
+                        (default: constants.bend_radius == 10.0)
 
         n_pts:			Number of points per full circle to use when rounding
         				corners. If 'auto', this is computed based on the
@@ -207,6 +209,6 @@ def path(layout, points, width=WIDTH, bend_radius=BEND_RADIUS, n_pts='auto',
         for point, idx in enumerate(points):
             points[idx] = pya.DPoint(p[0], p[1])
 
-    path = pya.DPath(points, width)
+    path = pya.DPath(points, wg_width)
 
     return path.round_corners(bend_radius, n_pts, layout.dbu)
