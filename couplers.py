@@ -15,6 +15,8 @@
 # 03 Jul 2019   Julian Sanders  Cleaned up script generation function. Made
 #                               constants lowercase.
 # 05 Jul 2019   Julian Sanders  Updated for new package name 'chickpea'.
+# 08 Jul 2019   Julian Sanders  Lengths of directional coupler arms can now
+#                               be individually adjusted.
 
 import pya
 from chickpea.constants import *
@@ -32,8 +34,9 @@ sep = 0.2   # default separation between directional coupler waveguies
 # Functions
 #
 
-def dir_coupler(layout, cell, layer, length, sep=sep, wg_width=wg_width, 
-    bend_radius=bend_radius, seg_length=seg_length, n_pts='auto'):
+def dir_coupler(layout, cell, layer, length, sep=sep, arm_length=0, 
+    wg_width=wg_width, bend_radius=bend_radius, seg_length=seg_length, 
+    n_pts='auto', origin='port0'):
     '''
     Generates layout of a directional coupler like the one shown below. 
     Inserts the coupler into the passed cell and layer. The center of the 
@@ -59,7 +62,22 @@ def dir_coupler(layout, cell, layer, length, sep=sep, wg_width=wg_width,
                         <float>
                         (default: 0.2)
 
-        wg_width:          Width of the path
+        arm_length:     Length of the straight section of the S-bend arms
+                        leading into the coupling section of the coupler.
+
+                        If a scalar, every arm will have the same length.
+
+                        If a list, its entries will correspond to the arms
+                        in the following positions:
+                            [lower left, upper left, lower right, upper right]
+
+                        If a dict, the keys should be 'lower left', 
+                        'upper left', 'lower right', or 'upper right'.
+
+                        <float or list(float) or dict(str: float)> 
+                        (default: 0)
+
+        wg_width:       Width of the path
                         <float>
                         (default: constants.wg_width == 0.5)
 
@@ -78,6 +96,14 @@ def dir_coupler(layout, cell, layer, length, sep=sep, wg_width=wg_width,
                         Only used if n_pts == 'auto'.
                         <float>
                         (default: constants.SEG_LEGNTH == 1.0)
+
+        origin:         Indicates the location of the origin relative to 
+                        the directional coupler. Can be 'port0' or 'center'.
+
+                        value       origin location
+                        -----------------------------------------------------
+                        'port0'     Lower left port
+                        'center'    Center relative to max device dimensions
 
     Diagram:
         ,:;,.                                                            .,;:'
@@ -116,7 +142,8 @@ def dir_coupler(layout, cell, layer, length, sep=sep, wg_width=wg_width,
     # Generate the paths for the directional coupler
     input1, straight1, output1, input2, straight2, output2 = dir_coupler_paths(
         layout, length, sep=sep, wg_width=wg_width, bend_radius=bend_radius, 
-        seg_length=seg_length, n_pts=n_pts)
+        seg_length=seg_length, n_pts=n_pts, arm_length=arm_length, 
+        origin=origin)
 
     if cell == 'divide':
         # Segregate each path to its own cell to facilitate parameter sweeps.
@@ -158,8 +185,9 @@ def dir_coupler(layout, cell, layer, length, sep=sep, wg_width=wg_width,
     return
 
 
-def dir_coupler_paths(layout, length, sep=sep, wg_width=wg_width, 
-    bend_radius=bend_radius, seg_length=seg_length, n_pts='auto'):
+def dir_coupler_paths(layout, length, sep=sep, arm_length=0, wg_width=wg_width, 
+    bend_radius=bend_radius, seg_length=seg_length, n_pts='auto',
+    origin='port0'):
     '''
     Generates layout of a directional coupler like the one shown below. 
     Inserts the coupler into the passed cell and layer. The center of the 
@@ -185,7 +213,22 @@ def dir_coupler_paths(layout, length, sep=sep, wg_width=wg_width,
                         <float>
                         (default: 0.2)
 
-        wg_width:          Width of the path
+        arm_length:     Length of the straight section of the S-bend arms
+                        leading into the coupling section of the coupler.
+
+                        If a scalar, every arm will have the same length.
+
+                        If a list, its entries will correspond to the arms
+                        in the following positions:
+                            [lower left, upper left, lower right, upper right]
+
+                        If a dict, the keys should be 'lower left', 
+                        'upper left', 'lower right', or 'upper right'.
+
+                        <float or list(float) or dict(str: float)> 
+                        (default: 0)
+
+        wg_width:       Width of the path
                         <float>
                         (default: constants.wg_width == 0.5)
 
@@ -204,6 +247,14 @@ def dir_coupler_paths(layout, length, sep=sep, wg_width=wg_width,
                         Only used if n_pts == 'auto'.
                         <float>
                         (default: constants.SEG_LEGNTH == 1.0)
+
+        origin:         Indicates the location of the origin relative to 
+                        the directional coupler. Can be 'port0' or 'center'.
+
+                        value       origin location
+                        -----------------------------------------------------
+                        'port0'     Lower left port
+                        'center'    Center relative to max device dimensions
 
     Diagram:
         ,:;,.                                                            .,;:'
@@ -251,34 +302,55 @@ def dir_coupler_paths(layout, length, sep=sep, wg_width=wg_width,
 
     '''
 
-    # Set up the s-bends leading into/out of the straight coupling portion
 
-    flipy_shiftx = pya.DTrans(  # transform lower left arm into lower right arm
-        pya.DTrans.M90,                     # mirror across y
-        4 * bend_radius + length,           # right by 4r + l
-        0)                                  # same vertical
+
+    #
+    # Set up the s-bends leading into/out of the straight coupling portion
+    #
+
+    # If arm length is not passed as a list, generate the appropriate list
+    # and store it in 'arm_length_list'.
+
+    arm_length = parse_arm_length(arm_length)
+
+    # Generate each s-bend with the requested length
+    input1 = paths.s_bend_steep(layout, arm_length[0], wg_width=wg_width, 
+        bend_radius=bend_radius, seg_length=seg_length, n_pts=n_pts)
+    input2 = paths.s_bend_steep(layout, arm_length[1], wg_width=wg_width, 
+        bend_radius=bend_radius, seg_length=seg_length, n_pts=n_pts)
+    output1 = paths.s_bend_steep(layout, arm_length[2], wg_width=wg_width, 
+        bend_radius=bend_radius, seg_length=seg_length, n_pts=n_pts)
+    output2 = paths.s_bend_steep(layout, arm_length[3], wg_width=wg_width, 
+        bend_radius=bend_radius, seg_length=seg_length, n_pts=n_pts)
+
+
+    # Now we'll need some transformations for getting the s-bends output by
+    # 's_bend_steep' into the right positions for the coupler.
+
+    flipy_shiftx = pya.DTrans(  # lower left arm -> lower right arm
+        pya.DTrans.M90,                # mirror across y
+        4 * bend_radius + length,      # right by 4r + l
+        arm_length[0] - arm_length[2]) # adjust for length diff b/w lower arms
     
-    flipx_shifty = pya.DTrans(  # transform lower left arm into upper left arm
+    device_height_left = (      # distance between left side ports
+        2 * bend_radius + arm_length[0] +   # lower arm total length
+        2 * bend_radius + arm_length[1] +   # upper arm total length
+        sep + wg_width)                     # length from coupling gap
+
+    flipx_shifty = pya.DTrans(  # lower left arm -> upper left arm
         pya.DTrans.M0,                      # mirror across x
         0,                                  # same horizontal
-        4 * bend_radius + sep + wg_width)      # up by 4r + l + wg_width
+        device_height_left)                 # move up
 
     shift_diag = pya.DTrans(pya.DPoint(  # lower left arm -> upper right arm
-        2 * bend_radius + length,             # up by 2r + l
-        2 * bend_radius + sep + wg_width))    # right by 2r + sep + wg_width
-
-    # Generate lower left arm and apply transformation to get the rest
-    input1  = paths.s_bend_steep(layout, wg_width=wg_width, bend_radius=bend_radius,
-        seg_length=seg_length, n_pts=n_pts)
-    input2  = input1.transformed(flipx_shifty)
-    output1 = input1.transformed(flipy_shiftx)
-    output2 = input1.transformed(shift_diag)
+        2 * bend_radius + length,                          # shift right
+        2 * bend_radius + arm_length[0] + sep + wg_width)) # shift up
 
     # Generate the straight segments for coupling
 
     bottom_points = [
-        pya.DPoint(2 * bend_radius,          2 * bend_radius),
-        pya.DPoint(2 * bend_radius + length, 2 * bend_radius)
+        pya.DPoint(2 * bend_radius,          2 * bend_radius + arm_length[0]),
+        pya.DPoint(2 * bend_radius + length, 2 * bend_radius + arm_length[0])
     ]
 
     straight1 = pya.DPath(bottom_points, wg_width)
@@ -286,7 +358,57 @@ def dir_coupler_paths(layout, length, sep=sep, wg_width=wg_width,
     sep_waveguides = pya.DTrans(pya.DPoint(0, sep + wg_width))
     straight2 = straight1.transformed(sep_waveguides)
 
+    input2  = input2.transformed(flipx_shifty)
+    output1 = output1.transformed(flipy_shiftx)
+    output2 = output2.transformed(shift_diag)
+
     return input1, straight1, output1, input2, straight2, output2
+
+
+def parse_arm_length(arm_length):
+    '''
+    If arm length is not passed as a list, return the corresponding list.
+
+    Args:
+        arm_length:     Length of the straight section of the S-bend arms
+                        leading into the coupling section of the coupler.
+
+                        If a scalar, every arm will have the same length.
+
+                        If a list, its entries will correspond to the arms
+                        in the following positions:
+                            [lower left, upper left, lower right, upper right]
+
+                        If a dict, the keys should be 'lower left', 
+                        'upper left', 'lower right', or 'upper right'.
+
+                        <float or list(float) or dict(str: float)> 
+    Return:
+        A list containing the information implied by the argument.
+    '''
+    arm_length_list = []
+
+    if type(arm_length) == dict:
+        arm_order = ['lower left', 'upper left', 'lower right', 'upper right']
+        for arm in arm_order:
+            try: arm_length_list.append(arm_length[arm])
+            except KeyError:
+
+                err = "Keys of 'arm_length' must include '{arm_order[0]}', "\
+                    + "'{arm_order[1]}', '{arm_order[2]}', "\
+                    + "and '{arm_order[3]}'."
+                raise KeyError(err.format(arm_order=arm_order))
+
+    elif type(arm_length) == float or type(arm_length) == int:
+        arm_length_list = [arm_length] * 4
+
+    elif type(arm_length) == list:
+        arm_length_list = arm_length
+
+    else:
+        raise TypeError('Argument must be a float or list(float) or dict(str: float)')
+
+    return arm_length_list
 
 
 def dir_coupler_length(length, bend_radius=bend_radius):

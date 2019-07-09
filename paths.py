@@ -8,8 +8,8 @@
 # 05 Jul 2019   Julian Sanders  Updated for new package name 'chickpea'.
 
 import math
-import numpy as np
 import pya
+import numpy as np
 from chickpea.constants import *
 
 def s_bend_shallow_curve(a, b, x):

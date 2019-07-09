@@ -11,7 +11,7 @@ generate various photonic devices.
 
 Clone the chickpea directory into the directory 
 
-	C:\Users\[user name]\AppData\Roaming\KLayout\python
+    C:\Users\[user name]\AppData\Roaming\KLayout\python
 
 The name 'chickpea' can then be used to import the python package into
 any python-based KLayout macro.
@@ -36,12 +36,12 @@ rib = layout.layer(1, 0)            # create rib waveguide layer
 
 # Generate the directional coupler
 couplers.dir_coupler(
-	layout, 		# layout object coupler will be inserted in
-	'divide', 		# instructs function to divide coupler into 6 cells
-	rib, 			# layer to insert coupler on
-	16,				# length of straight coupling waveguides, microns
-  	bend_radius=8,	# bend radius of s-bends
-  	seg_length=0.2	# length of straight segments that approximate round corners
+    layout,         # layout object coupler will be inserted in
+    'divide',       # instructs function to divide coupler into 6 cells
+    rib,            # layer to insert coupler on
+    16,             # length of straight coupling waveguides, microns
+    bend_radius=8,  # bend radius of s-bends
+    seg_length=0.2  # length of straight segments that approximate round corners
  )
 
 # Write the resulting layout to a GDS file.
