@@ -25,7 +25,7 @@ def s_bend_shallow_curve(a, b, x):
         Value of the function at x
         <float>
     '''
-    return (4 * a * x)(b + 1 - np.abs(x)) / ((b + 1) ** 2)
+    return (4 * a * x) * (b + 1 - np.abs(x)) / ((b + 1) ** 2)
     
 
 def s_bend_shallow_curve_length(a, b):
@@ -66,7 +66,8 @@ def s_bend_shallow_length(height, length):
     return s_bend_shallow_curve_length(height, length - 1)
 
 
-def s_bend_shallow(layout, height, length, wg_width=wg_width, n_pts=100):
+def s_bend_shallow(layout, height, length, wg_width=wg_width, n_pts='auto',
+    seg_length=seg_length):
     '''
     Generates a shallow s-bend path.
 
@@ -95,14 +96,19 @@ def s_bend_shallow(layout, height, length, wg_width=wg_width, n_pts=100):
         pya.DPath object
 
     '''
-    x = np.linspace(0, length, n_pts)
-    b = length - 1
-    y = s_bend_shallow_curve(height, length, x)
+    # Compute number of points to keep the distance bewteen points on the
+    # bend to approximately seg_length
+    if n_pts == 'auto':
+        n_pts = int(s_bend_shallow_length(height, length) / seg_length)
+
+
+    x = np.linspace(-length / 2, length / 2, n_pts)
+    y = s_bend_shallow_curve(height, length - 1, x)
 
     # Convert to DPoints
     points = []
     for i in range(n_pts):
-        points.append(DPoint(x[i], y[i]))
+        points.append(pya.DPoint(x[i], y[i]))
 
     return pya.DPath(points, wg_width)
 
