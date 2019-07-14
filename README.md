@@ -26,26 +26,64 @@ files inside the folder) called 'couplers', which includes the function we
 want to generate a directional coupler with.
 
 ```python
+# This script generates a directional coupler.
+#
+# Revision History:
+#   Julian Sanders  25 Jun 2019 Initial Revision
+#   Julian Sanders  28 Jun 2019 Debugging
+#   Julian Sanders  05 Jul 2019 Updated for package name change to
+#                               'chickpea' and added generation of
+#                               3D FDTD script.
+#   Julian Sanders  13 Jul 2019 Updated for changes to the coupler's 
+#                               arm parametrization.
+
 import pya    # Module containing KLayout API
 from chickpea import couplers
+from chickpea import paths
 
-# Initialize a layout, cell, and layer in KLayout
+# For debugging chickpea without exiting KLayout
+from importlib import reload
+reload(couplers)
+reload(paths)
+
 layout = pya.Layout()               # create new layout
 top = layout.create_cell("TOP")     # create top-level cell
 rib = layout.layer(1, 0)            # create rib waveguide layer
 
-# Generate the directional coupler
-couplers.dir_coupler(
-    layout,         # layout object coupler will be inserted in
-    'divide',       # instructs function to divide coupler into 6 cells
-    rib,            # layer to insert coupler on
-    16,             # length of straight coupling waveguides, microns
-    bend_radius=8,  # bend radius of s-bends
-    seg_length=0.2  # length of straight segments that approximate round corners
- )
+length_3dB = 16.23  # coupling length
 
-# Write the resulting layout to a GDS file.
+# Specify the length and height of each s-bend arm of the 
+# coupler individually. The largest possible bend radius
+# for the given length and height specifications will be used.
+arm_lengths = {
+  'lower left': 20,
+  'upper right': 60,
+  'lower right': 20,
+  'upper left': 10
+}
+
+arm_heights = {
+  'lower left': 5,
+  'upper right': 52,
+  'lower right': 2,
+  'upper left': 30
+}
+
+# Note: to make all arms the same, just make 'arm_lengths'
+# and 'arm_heights' scalars.
+
+# Generate the directional coupler
+couplers.dir_coupler(layout, 'divide', rib, length_3dB,
+  arm_lengths, arm_heights, seg_length=0.2)
+
+# Print the device's length, height, and port coordinates
+print(couplers.dir_coupler_length(length_3dB, arm_x))
+print(couplers.dir_coupler_height(arm_heights=arm_y, sep=0.2))
+print(couplers.dir_coupler_ports(length_3dB, arm_lengths=arm_x, 
+  arm_heights=arm_y, sep=0.2))
+
+
 layout.write("C:/Users/julli/OneDrive - " 
    + "California Institute of Technology/"
-   + "Research/gds_models/dir_couplers/dir_coupler_3dB.gds")
+   + "CHIC/gds_models/dir_couplers/dir_coupler_3dB.gds")
 ```

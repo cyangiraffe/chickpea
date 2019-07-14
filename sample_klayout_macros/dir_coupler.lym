@@ -22,6 +22,8 @@
 #   Julian Sanders  05 Jul 2019 Updated for package name change to
 #                               'chickpea' and added generation of
 #                               3D FDTD script.
+#   Julian Sanders  13 Jul 2019 Updated for changes to the coupler's 
+#                               arm parametrization.
 
 import pya    # Module containing KLayout API
 from chickpea import couplers
@@ -38,33 +40,44 @@ rib = layout.layer(1, 0)            # create rib waveguide layer
 
 length_3dB = 16.23  # coupling length
 
-arms = {
-  'lower left': 5,
-  'upper right': 52,
-  'lower right': 2,
+# Specify the length and height of each s-bend arm of the 
+# coupler individually. The largest possible bend radius
+# for the given length and height specifications will be used.
+arm_lengths = {
+  'lower left': 20,
+  'upper right': 60,
+  'lower right': 20,
   'upper left': 10
 }
 
-# Generate the directional coupler layout
+arm_heights = {
+  'lower left': 5,
+  'upper right': 52,
+  'lower right': 2,
+  'upper left': 30
+}
+
+# Generate the directional coupler
 couplers.dir_coupler(layout, 'divide', rib, length_3dB,
-  bend_radius=8, seg_length=0.2,
-  arm_length=arms)
+  arm_lengths, arm_heights, seg_length=0.2)
 
-# Generate the varFDTD script for simulating the generated coupler
-couplers.dir_coupler_varfdtd(
-  r'C:\Users\julli\Desktop\gen_varfdtd_dir_coupler_3dB.lsf', # save path
-  r'D:\julian\3dB_coupler\dir_coupler_3dB.gds', # gds path
-  length_3dB,
-  bend_radius=8)
+# Print the device's length, height, center coordinate, and port coordinates
+print(couplers.dir_coupler_length(length_3dB, arm_x))
+print(couplers.dir_coupler_height(arm_heights=arm_y, sep=0.2))
+print(couplers.dir_coupler_center(length_3dB, arm_lengths=arm_x, 
+  arm_heights=arm_y, sep=0.2))
+print(couplers.dir_coupler_ports(length_3dB, arm_lengths=arm_x, 
+  arm_heights=arm_y, sep=0.2))
 
+# Currently out-dated. See dir_coupler_fdtd docstring for details.
 # Generate a 3D FDTD script for simulating the generated coupler
-couplers.dir_coupler_fdtd(
-  r'C:\Users\julli\Desktop\gen_fdtd_dir_coupler_3dB.lsf', # save path
-  r'D:\julian\3dB_coupler\dir_coupler_3dB.gds', # gds path
-  length_3dB,
-  bend_radius=8)
+#couplers.dir_coupler_fdtd(
+#  r'C:\Users\julli\Desktop\gen_fdtd_dir_coupler_3dB.lsf', # save path
+#  r'D:\julian\3dB_coupler\dir_coupler_3dB.gds', # gds path
+#  length_3dB,
+#  bend_radius=8)
 
 layout.write("C:/Users/julli/OneDrive - " 
    + "California Institute of Technology/"
-   + "Research/gds_models/dir_couplers/dir_coupler_3dB.gds")</text>
+   + "CHIC/gds_models/dir_couplers/dir_coupler_3dB.gds")</text>
 </klayout-macro>
