@@ -1,5 +1,6 @@
 # This file contains functions for generating various photonic waveguide paths
 # in KLayout. The top-level functions are as follows:
+#
 #   path                            - wrapper around pya.round_corners
 #   s_bend(length, height)          - generates an s-bend, maximizing bend 
 #                                     radius for the specified length and height
@@ -48,11 +49,13 @@ def s_bend(layout, length='auto', bend_radius='auto', height='auto',
                         <pya.Layout object>
 
         length:         Length of the s-bend. Also the distance between its
-                        ports in the x-direction.
+                        ports in the x-direction. If supplied along with
+                        bend_radius, length <= 2 * bend_raidus.
                         <float or int or 'auto'>
                         (default: 'auto')
 
-        bend_radius:    Radius of corner arcs.
+        bend_radius:    Radius of corner arcs. If supplied along with length,
+                        2 * bend_radius >= length.
                         <float or int or 'auto'>
                         (default: 'auto')
 
@@ -121,10 +124,12 @@ def s_bend_solve_params(length, bend_radius, height, bend_angle):
 
     Args:
         length:         Length of the s-bend. Also the distance between its
-                        ports in the x-direction.
+                        ports in the x-direction. If supplied along with
+                        bend_radius, length <= 2 * bend_raidus.
                         <float or int or 'auto'>
 
-        bend_radius:    Radius of corner arcs.
+        bend_radius:    Radius of corner arcs. If supplied along with length,
+                        2 * bend_radius >= length.
                         <float or int or 'auto'>
 
         height:         Height of the s-bend. Also the distance between the 
