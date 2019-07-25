@@ -22,10 +22,161 @@
 # 05 Jul 2019   Julian Sanders  Updated for new package name 'chickpea'.
 # 10 Jul 2019   Julian Sanders  Changed shallow s-bend generation from an 
 #                               overcomplicated polynomial to circular bends.
+# 24 Jul 2019   Julian Sanders  Added function for generating linear and
+#                               parabolic tapers.
 
 import pya
 import math as ma
 from chickpea.constants import *
+
+
+def parabolic_taper(layout, start_width, end_width, length, 
+    seg_length=seg_length, n_pts='auto', origin='port0'):
+    '''
+    Generates a parabolic waveguide taper as a pya.DPolygon object.
+
+    Args:
+        layout:         Layout object for instantiation
+                        <pya.Layout object>
+
+        start_width:    Width of the taper at its left end. Must be smaller
+                    `   than 'end_width'.
+                        <float or int>
+
+        end_width:      Width of the taper at its right end. Must be larger 
+                        than 'start_width'.
+                        <float or int>
+
+        length:         Length of the s-bend. Also the distance between its
+                        ports in the x-direction. If supplied along with
+                        bend_radius, length <= 2 * bend_raidus.
+                        <float or int or 'auto'>
+                        (default: 'auto')
+
+        seg_length:     When rounding parabola, gives the distance between the
+                        points defining it and sets n_pts appropriately. Does
+                        this computation using the approximation of a graudal
+                        taper (i.e., |start_width - end_width| << length).
+                        Only used if n_pts == 'auto'.
+                        <float or int>
+                        (default: constants.seg_length == 1.0)
+
+        n_pts:          Number of points defining each parabolic taper. Thus
+                        The polygon with have a total of 2 * n_pts points.
+
+        origin:         Indicates the location of the origin relative to 
+                        the taper. Can be 'port0' or 'center'.
+
+                        value       origin location
+                        -----------------------------------------------------
+                        'port0'     Left port
+                        'center'    Center relative to max device dimensions
+                        'port1'     Right port
+
+    Return:
+        A polygon in the shape of a linear taper
+        <pya.DPolygon object>
+    '''
+    if start_width > end_width:
+        raise ValueError("Must have start_width < end_width")
+
+    if n_pts == 'auto':
+        n_pts = int(round(length / seg_length))
+
+    # TODO: replace with numpy arrays when people in the lab update KLayout
+    # to the version with numpy built in
+
+
+    # x-coordinates
+    x_coords = [i * (length / (n_pts - 1)) for i in range(n_pts)]
+
+    # Parameters for the parabola ax^2 + k defining the taper profile
+    a = (end_width - start_width) / (2 * length**2)
+    k = start_width / 2
+
+    upper_profile =  [a * x**2 + k for x in x_coords]
+    lower_profile = [-y for y in upper_profile]
+
+    # Define points in the hull of the taper
+    hull_upper = [pya.DPoint(x_coords[i], upper_profile[i]) 
+        for i in range(n_pts)]
+    hull_lower = [pya.DPoint(x_coords[i], lower_profile[i]) 
+        for i in range(n_pts)]
+
+    # instantiate the polygon
+    taper = pya.DPolygon(hull_upper + hull_lower[::-1])
+
+    # Shift the taper so that it has the desired coordinate origin.
+    if origin == 'center':
+        taper = taper.transformed(pya.DTrans(pya.DPoint(-length / 2, 0)))
+    elif origin == 'port1':
+        taper = taper.transformed(pya.DTrans(pya.DPoint(-length, 0)))
+    elif origin == 'port0':
+        pass
+    else:
+        raise ValueError("Expected arugment 'origin' to be one of 'port0', "
+            + "'port1', or 'center'. instead got {}".format(origin))
+
+    return taper
+
+
+def linear_taper(layout, start_width, end_width, length, origin='port0'):
+    '''
+    Generates a linear waveguide taper as a pya.DPolygon object.
+
+    Args:
+        layout:         Layout object for instantiation
+                        <pya.Layout object>
+
+        start_width:    Width of the taper at its left end
+                        <float or int>
+
+        end_width:      Width of the taper at its right end
+                        <float or int>
+
+        length:         Length of the s-bend. Also the distance between its
+                        ports in the x-direction. If supplied along with
+                        bend_radius, length <= 2 * bend_raidus.
+                        <float or int or 'auto'>
+                        (default: 'auto')
+
+        origin:         Indicates the location of the origin relative to 
+                        the taper. Can be 'port0' or 'center'.
+
+                        value       origin location
+                        -----------------------------------------------------
+                        'port0'     Left port
+                        'center'    Center relative to max device dimensions
+                        'port1'     Right port
+
+    Return:
+        A polygon in the shape of a linear taper
+        <pya.DPolygon object>
+    '''
+    # Define points in the hull of the taper
+    hull = [
+        pya.DPoint(0,      -start_width / 2),
+        pya.DPoint(0,       start_width / 2),
+        pya.DPoint(length,  end_width / 2),
+        pya.DPoint(length, -end_width / 2)
+    ]
+
+    # instantiate the polygon
+    taper = pya.DPolygon(hull)
+
+    # Shift the taper so that it has the desired coordinate origin.
+    if origin == 'center':
+        taper = taper.transformed(pya.DTrans(pya.DPoint(-length / 2, 0)))
+    elif origin == 'port1':
+        taper = taper.transformed(pya.DTrans(pya.DPoint(-length, 0)))
+    elif origin == 'port0':
+        pass
+    else:
+        raise ValueError("Expected arugment 'origin' to be one of 'port0', "
+            + "'port1', or 'center'. instead got {}".format(origin))
+
+    return taper
+
 
 def s_bend(layout, length='auto', bend_radius='auto', height='auto', 
     bend_angle='auto', wg_width=wg_width, n_pts='auto', seg_length=seg_length):
