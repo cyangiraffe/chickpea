@@ -258,7 +258,7 @@ def s_bend(layout, length='auto', bend_radius='auto', height='auto',
     # generated with very small bend angles, since in this limit the two
     # points at the path verticies will be placed past the boundaries of the
     # layout, and we'd get asymmetries, wrap-arounds, etc.
-    if bend_angle < 1e-4:
+    if not steep_bend and bend_angle < 1e-4:
         pass #TODO
 
     if steep_bend:
