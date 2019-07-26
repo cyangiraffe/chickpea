@@ -27,6 +27,7 @@
 
 import pya
 import math as ma
+import numpy as np
 from chickpea.constants import *
 
 
@@ -88,14 +89,14 @@ def parabolic_taper(layout, start_width, end_width, length,
 
 
     # x-coordinates
-    x_coords = [i * (length / (n_pts - 1)) for i in range(n_pts)]
+    x_coords = np.linspace(0, length, n_pts)
 
     # Parameters for the parabola ax^2 + k defining the taper profile
     a = (end_width - start_width) / (2 * length**2)
     k = start_width / 2
 
-    upper_profile =  [a * x**2 + k for x in x_coords]
-    lower_profile = [-y for y in upper_profile]
+    upper_profile =  a * x**2 + k
+    lower_profile = -y
 
     # Define points in the hull of the taper
     hull_upper = [pya.DPoint(x_coords[i], upper_profile[i]) 
@@ -245,12 +246,20 @@ def s_bend(layout, length='auto', bend_radius='auto', height='auto',
     steep_bend, length, bend_radius, height, bend_angle = \
         s_bend_solve_params(length, bend_radius, height, bend_angle)
 
+    # Raise an error if the bend has a radius less than the minimum (5 um)
     if bend_radius < min_bend_radius:
         raise ValueError("Computed a bend radius of {} um for the s-bend, ".format(bend_radius)
                        + "which is less than the minimum radius of {} um. Try".format(min_bend_radius)
                        + " making the bends less tight, or lower the value of"
                        + " chickpea.constants.min_bend_radius to stop showing"
                        + " this error.")
+
+    # KLayout will have trouble properly representing paths that were
+    # generated with very small bend angles, since in this limit the two
+    # points at the path verticies will be placed past the boundaries of the
+    # layout, and we'd get asymmetries, wrap-arounds, etc.
+    if bend_angle < 1e-4:
+        pass #TODO
 
     if steep_bend:
         return s_bend_steep(layout, height - 2 * bend_radius, wg_width=wg_width,
@@ -357,10 +366,13 @@ def s_bend_solve_params(length, bend_radius, height, bend_angle):
 
     # Compute bend_radius and bend_angle from length and height
     elif bend_radius == 'auto' and bend_angle == 'auto':
-        steep_bend = height > length
-        if steep_bend:
-            bend_radius = length / 2
-        else:
+        bend_radius = length / 2
+        # If the bend is taller than it is long, make it steep, unless the
+        # steep bend has a bend radius smaller than the minimum in which
+        # case we let shallow_s_bend make a bend that will double back on
+        # itself, thus making the bend radius larger.
+        steep_bend = height > length and bend_radius >= min_bend_radius
+        if not steep_bend:
             bend_angle, bend_radius = s_bend_solve_angle_radius(length, height)
 
     # Compute height and bend_angle from length and bend_radius
