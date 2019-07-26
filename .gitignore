@@ -56,3 +56,7 @@ docs/_build/
 
 # PyBuilder
 target/
+
+# Constants only relevant to a local workspace can be put in a file named
+# 'my_constants.py' that won't be tracked by git.
+my_constants.py
