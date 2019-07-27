@@ -29,6 +29,7 @@ import pya
 import math as ma
 import numpy as np
 from chickpea.constants import *
+from chickpea.transforms import null_trans
 
 
 def parabolic_taper(layout, start_width, end_width, length, 
@@ -179,8 +180,9 @@ def linear_taper(layout, start_width, end_width, length, origin='port0'):
     return taper
 
 
-def s_bend(layout, length='auto', bend_radius='auto', height='auto', 
-    bend_angle='auto', wg_width=wg_width, n_pts='auto', seg_length=seg_length):
+def s_bend(layout, layer, length='auto', bend_radius='auto', height='auto', 
+    bend_angle='auto', wg_width=wg_width, n_pts='auto', seg_length=seg_length,
+    trans=null_trans):
     '''
     Generates a path in the shape of an s-bend. Origin at the lower left port.
         
@@ -199,6 +201,10 @@ def s_bend(layout, length='auto', bend_radius='auto', height='auto',
     Args:
         layout:         Layout object for instantiation
                         <pya.Layout object>
+
+        layer:          The index of the layer to insert the path into (this
+                        is the value returned from the layout.layer() method).
+                        <int>      
 
         length:         Length of the s-bend. Also the distance between its
                         ports in the x-direction. If supplied along with
@@ -240,8 +246,8 @@ def s_bend(layout, length='auto', bend_radius='auto', height='auto',
                         (default: constants.seg_length == 1.0)
 
     Return:
-        The s-bend path
-        <pya.DPath object>
+        The cell index of the s-bend rounded path PCell
+        <int>
     '''
     steep_bend, length, bend_radius, height, bend_angle = \
         s_bend_solve_params(length, bend_radius, height, bend_angle)
@@ -262,11 +268,13 @@ def s_bend(layout, length='auto', bend_radius='auto', height='auto',
         pass #TODO
 
     if steep_bend:
-        return s_bend_steep(layout, height - 2 * bend_radius, wg_width=wg_width,
-            bend_radius=bend_radius, n_pts=n_pts, seg_length=seg_length)
+        return s_bend_steep(layout, layer, height - 2 * bend_radius, wg_width=wg_width,
+            bend_radius=bend_radius, n_pts=n_pts, seg_length=seg_length,
+            trans=trans)
     else:
-        return s_bend_shallow(layout, length, bend_radius, height, bend_angle, 
-            wg_width=wg_width, n_pts=n_pts, seg_length=seg_length)
+        return s_bend_shallow(layout, layer, length, bend_radius, height, bend_angle, 
+            wg_width=wg_width, n_pts=n_pts, seg_length=seg_length,
+            trans=trans)
 
 
 def s_bend_solve_params(length, bend_radius, height, bend_angle):
@@ -581,8 +589,8 @@ def s_bend_solve_length_angle(height, bend_radius):
     return length, bend_angle
 
 
-def s_bend_shallow(layout, length, bend_radius, height, bend_angle, 
-    wg_width=wg_width, n_pts='auto', seg_length=seg_length):
+def s_bend_shallow(layout, layer, length, bend_radius, height, bend_angle, 
+    wg_width=wg_width, n_pts='auto', seg_length=seg_length, trans=null_trans):
     '''
     Generates a shallow s-bend.
 
@@ -590,6 +598,10 @@ def s_bend_shallow(layout, length, bend_radius, height, bend_angle,
         length:         Length of the s-bend. Also the distance between its
                         ports in the x-direction.
                         <float or int or 'auto'>
+
+        layer:          The index of the layer to insert the path into (this
+                        is the value returned from the layout.layer() method).
+                        <int>
 
         bend_radius:    Radius of corner arcs.
                         <float or int or 'auto'>
@@ -604,9 +616,14 @@ def s_bend_shallow(layout, length, bend_radius, height, bend_angle,
                         will double back on itself.
                         <float or int or 'auto'>
 
+        trans:          A transformation to apply upon instantiation of the
+                        rounded path PCell.
+                        <pya.DTrans object>
+                        (default: transforms.null_trans)
+
     Return:
-        The s-bend path
-        <pya.DPath object>
+        The cell index of the s-bend rounded path PCell
+        <int>
     '''
 
     x1 = bend_radius * ma.tan((ma.pi - bend_angle) / 2)
@@ -619,12 +636,12 @@ def s_bend_shallow(layout, length, bend_radius, height, bend_angle,
         pya.DPoint(length,  height)
     ]
 
-    return path(layout, points, wg_width=wg_width, bend_radius=bend_radius,
-        n_pts=n_pts, seg_length=seg_length)
+    return path(layout, layer, points, wg_width=wg_width, bend_radius=bend_radius,
+        n_pts=n_pts, seg_length=seg_length, trans=trans)
 
 
-def s_bend_steep(layout, length, wg_width=wg_width, bend_radius=bend_radius, 
-	n_pts='auto', seg_length=seg_length):
+def s_bend_steep(layout, layer, length, wg_width=wg_width, bend_radius=bend_radius, 
+	n_pts='auto', seg_length=seg_length, trans=null_trans):
     '''
     Generates a path in the shape of an s-bend with 90 degree bends. A helper
     function for 's_bend' that handles the case height > length.
@@ -633,6 +650,10 @@ def s_bend_steep(layout, length, wg_width=wg_width, bend_radius=bend_radius,
     Args:
         layout: 		Layout object for instantiation
                 		<pya.Layout object>
+
+        layer:          The index of the layer to insert the path into (this
+                        is the value returned from the layout.layer() method).
+                        <int>
 
         length:         Length of straight segment in middle of the s-bend
                         <float>
@@ -657,9 +678,14 @@ def s_bend_steep(layout, length, wg_width=wg_width, bend_radius=bend_radius,
         				<float>
         				(default: constants.seg_length == 1.0)
 
+        trans:          A transformation to apply upon instantiation of the
+                        rounded path PCell.
+                        <pya.DTrans object>
+                        (default: transforms.null_trans)
+
     Return:
-        The s-bend path
-        <pya.DPath object>
+        The cell index of the s-bend rounded path PCell
+        <int>
     '''
     points = [
     	pya.DPoint(0,               0                       ),
@@ -668,21 +694,27 @@ def s_bend_steep(layout, length, wg_width=wg_width, bend_radius=bend_radius,
     	pya.DPoint(2 * bend_radius, length + 2 * bend_radius)
 	]
 
-    return path(layout, points, wg_width=wg_width, bend_radius=bend_radius,
-        n_pts=n_pts, seg_length=seg_length)
+    return path(layout, layer, points, wg_width=wg_width, bend_radius=bend_radius,
+        n_pts=n_pts, seg_length=seg_length, trans=trans)
 
 
-def path(layout, points, wg_width=wg_width, bend_radius=bend_radius, n_pts='auto', 
-    seg_length=seg_length):
+def path(layout, layer, points, wg_width=wg_width, bend_radius=bend_radius, n_pts='auto', 
+    seg_length=seg_length, trans=null_trans):
     '''
-    Generates a path with rounded corners.
+    Generates a rounded path PCell from the passed path.
 
     Args:
         layout: 		Layout object for instantiation
                 		<pya.Layout object>
 
-        points: 		Points of verticies of manhattan path
-               		 	<list of 2-tuples (or 2 x n array-like) of ints>
+        layer:          The index of the layer to insert the path into (this
+                        is the value returned from the layout.layer() method).
+                        <int>
+
+        points: 		Array of verticies in the path to be rounded.
+               		 	<2 x n array-like of floats> 
+                        OR 
+                        <1D array-like of pya.DPoints>
 
         wg_width:  		Width of the path
                 		<float>
@@ -704,9 +736,14 @@ def path(layout, points, wg_width=wg_width, bend_radius=bend_radius, n_pts='auto
         				<float>
         				(default: constants.seg_length == 1.0)
 
+        trans:          A transformation to apply upon instantiation of the
+                        rounded path PCell.
+                        <pya.DTrans object>
+                        (default: transforms.null_trans)
+
     Return:
-        The rounded path
-        pya.DPath object
+        The instantiated rounded path PCell.
+        <int>
 
     '''
     # Compute number of points to keep the distance bewteen points on the
@@ -721,4 +758,19 @@ def path(layout, points, wg_width=wg_width, bend_radius=bend_radius, n_pts='auto
 
     path = pya.DPath(points, wg_width)
 
-    return path.round_corners(bend_radius, n_pts, layout.dbu)
+    basic_lib = pya.Library.library_by_name("Basic")
+    pcell_dec = basic_lib.layout().pcell_declaration("ROUND_PATH")
+    layer_name = layout.layer_infos()[layer]
+
+    parameters = {
+        "layer":   layer_name, 
+        "radius":  bend_radius, 
+        "path":    path, 
+        "npoints": n_pts
+    }
+
+    pcell_idx = layout.add_pcell_variant(basic_lib, pcell_dec.id(), parameters)
+
+    pcell = pya.DCellInstArray(pcell_idx, trans)
+
+    return pcell

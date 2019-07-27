@@ -41,13 +41,14 @@
 import pya
 from chickpea.constants import *
 from chickpea import paths
+from chickpea.transforms import null_trans
 import os.path
 
 #
 # Local constants
 #
 
-sep = 0.2   # default separation between directional coupler waveguies
+sep = 0.2   # default separation between directional coupler waveguides
 
 
 #
@@ -67,6 +68,20 @@ def dir_coupler(layout, cell, layer, coupling_length, arm_lengths=16,
     Args:
         layout:         Layout object for instantiation
                         <pya.Layout object>
+
+        cell:           Index of the cell to insert the directional coupler
+                        into (this is the value returned by the method
+                        'layout.create_cell'). If instead of a cell index, 
+                        the string 'divide' is passed, the coupler is instead
+                        automatically instantiated in the layout's top-level
+                        cell as six separate sub-cells. This division is
+                        intended to make doing parameter sweeps in Lumerical
+                        easier when importing the coupler from GDS.
+                        <int or str>
+
+        layer:          The index of the layer to insert the path into (this
+                        is the value returned from the layout.layer() method).
+                        <int>
 
         height:         Distance between ports in direction perpendicular to
                         port direction
@@ -135,43 +150,19 @@ def dir_coupler(layout, cell, layer, coupling_length, arm_lengths=16,
                         -----------------------------------------------------
                         'port0'     Lower left port
                         'center'    Center relative to max device dimensions
-
-    Diagram:
-        ,:;,.                                                            .,;:'
-        .'',,,,'.                                                    .';,,,''.
-              .,:;.                                                .;;'.      
-                 ':,                                              ;:.         
-                  .:;                                           .::           
-                   .;,                                          ;:            
-                    ;;.                                        .;'            
-                    ';.                                        ';.            
-                    .;'                                        ,;.            
-                     ::                                       .;,             
-                     .;;                                     .::              
-                      .;:.                                  .:,               
-                        .;;.                              .;;.                
-                          .,;::::::::::::::::::::::::::::,,.                  
-                        
-                          .,;::::::::::::::::::::::::::::,;,.                  
-                        ':;.                              .;;.                
-                      .:;.                                  .:;.              
-                     .;,                                      ::.             
-                     :;                                       .:;             
-                    .;.                                        ,;.            
-                    ';.                                        ';.            
-                    ;:                                         .;,            
-                   .;'                                          ;;.           
-                  .;,                                            ;:.          
-                 ,;'                                              ,:'         
-              .,;,.                                                .,;,.      
-        XX,,,,,.                                                      ',,,,,'.
-        XX,..                                                            .',;.
     '''
     # Generate the paths for the directional coupler
     input1, straight1, output1, input2, straight2, output2 = dir_coupler_paths(
-        layout, coupling_length, arm_lengths=arm_lengths, arm_heights=arm_heights, 
+        layout, layer, coupling_length, arm_lengths=arm_lengths, arm_heights=arm_heights, 
         sep=sep, wg_width=wg_width,
         seg_length=seg_length, n_pts=n_pts, origin=origin)
+
+    # cell.insert(input1)
+    # cell.insert(input2)
+    # cell.insert(output1)
+    # cell.insert(output2)
+    # cell.insert(straight1)
+    # cell.insert(straight2)
 
     if cell == 'divide':    # Divide coupler into 6 cells
         # Segregate each path to its own cell to facilitate parameter sweeps.
@@ -182,14 +173,13 @@ def dir_coupler(layout, cell, layer, coupling_length, arm_lengths=16,
         cell_straight1 = layout.create_cell('straight1')
         cell_straight2 = layout.create_cell('straight2')
 
-        cell_input1.shapes(layer).insert(input1)
-        cell_input2.shapes(layer).insert(input2)
-        cell_output1.shapes(layer).insert(output1)
-        cell_output2.shapes(layer).insert(output2)
-        cell_straight1.shapes(layer).insert(straight1)
-        cell_straight2.shapes(layer).insert(straight2)
+        cell_input1.insert(input1)
+        cell_input2.insert(input2)
+        cell_output1.insert(output1)
+        cell_output2.insert(output2)
+        cell_straight1.insert(straight1)
+        cell_straight2.insert(straight2)
 
-        null_trans = pya.DTrans(0, 0)   # transformation does nothing
         top = layout.cell(0)            # get top-level cell in the heirarchy
 
         # Instatiate each cell as a subcell of 'top'.
@@ -203,17 +193,17 @@ def dir_coupler(layout, cell, layer, coupling_length, arm_lengths=16,
     else:   # Insert the coupler into the passed cell
         # Insert the paths into the passed cell so that the user can customize
         # the coupler's placement in their layout by transforming the cell.
-        cell.shapes(layer).insert(input1)
-        cell.shapes(layer).insert(input2)
-        cell.shapes(layer).insert(output1)
-        cell.shapes(layer).insert(output2)
-        cell.shapes(layer).insert(straight1)
-        cell.shapes(layer).insert(straight2)
+        cell.insert(input1)
+        cell.insert(input2)
+        cell.insert(output1)
+        cell.insert(output2)
+        cell.insert(straight1)
+        cell.insert(straight2)
 
     return
 
 
-def dir_coupler_paths(layout, coupling_length, sep=sep, arm_lengths=16,
+def dir_coupler_paths(layout, layer, coupling_length, sep=sep, arm_lengths=16,
     arm_heights=8, wg_width=wg_width, seg_length=seg_length, n_pts='auto', 
     origin='port0'):
     '''
@@ -226,6 +216,10 @@ def dir_coupler_paths(layout, coupling_length, sep=sep, arm_lengths=16,
     Args:
         layout:         Layout object for instantiation
                         <pya.Layout object>
+
+        layer:          The index of the layer to insert the path into (this
+                        is the value returned from the layout.layer() method).
+                        <int>
 
         height:         Distance between ports in direction perpendicular to
                         port direction
@@ -280,40 +274,10 @@ def dir_coupler_paths(layout, coupling_length, sep=sep, arm_lengths=16,
                         'port0'     Lower left port
                         'center'    Center relative to max device dimensions
 
-    Diagram:
-        ,:;,.                                                            .,;:'
-        .'',,,,'.                                                    .';,,,''.
-              .,:;.                                                .;;'.      
-                 ':,                                              ;:.         
-                  .:;                                           .::           
-                   .;,                                          ;:            
-                    ;;.                                        .;'            
-                    ';.                                        ';.            
-                    .;'                                        ,;.            
-                     ::                                       .;,             
-                     .;;                                     .::              
-                      .;:.                                  .:,               
-                        .;;.                              .;;.                
-                          .,;::::::::::::::::::::::::::::,,.                  
-                        
-                          .,;::::::::::::::::::::::::::::,;,.                  
-                        ':;.                              .;;.                
-                      .:;.                                  .:;.              
-                     .;,                                      ::.             
-                     :;                                       .:;             
-                    .;.                                        ,;.            
-                    ';.                                        ';.            
-                    ;:                                         .;,            
-                   .;'                                          ;;.           
-                  .;,                                            ;:.          
-                 ,;'                                              ,:'         
-              .,;,.                                                .,;,.      
-        XX,,,,,.                                                      ',,,,,'.
-        XX,..                                                            .',;.
     
-    Return:
+    Return: <tuple of pya.DCellInstArray objects>
         input1:     Lower-left s-bend
-
+            
         straight1:  Lower straight segment for coupling
 
         output1:    Lower-right s-bend
@@ -334,22 +298,24 @@ def dir_coupler_paths(layout, coupling_length, sep=sep, arm_lengths=16,
     arm_lengths = parse_arm_length(arm_lengths)
     arm_heights = parse_arm_length(arm_heights)
 
-    for arm in arm_lengths:
-        print(arm)
 
-    # Generate each s-bend with the requested length
-    input1 = paths.s_bend(layout, length=arm_lengths[0], height=arm_heights[0], 
-        wg_width=wg_width, seg_length=seg_length, n_pts=n_pts)
-    input2 = paths.s_bend(layout, length=arm_lengths[1], height=arm_heights[1], 
-        wg_width=wg_width, seg_length=seg_length, n_pts=n_pts)
-    output1 = paths.s_bend(layout, length=arm_lengths[2], height=arm_heights[2], 
-        wg_width=wg_width, seg_length=seg_length, n_pts=n_pts)
-    output2 = paths.s_bend(layout, length=arm_lengths[3], height=arm_heights[3], 
-        wg_width=wg_width, seg_length=seg_length, n_pts=n_pts)
+    #
+    # Generate the straight segments for coupling
+    #
 
+    bottom_points = [
+        pya.DPoint(arm_lengths[0],                   arm_heights[0]),
+        pya.DPoint(arm_lengths[0] + coupling_length, arm_heights[0])
+    ]
+
+    straight_cell = layout.create_cell('dc_straight')
+    straight_bottom = pya.DPath(bottom_points, wg_width)
+    straight_cell.shapes(layer).insert(straight_bottom)
+
+    sep_waveguides = pya.DTrans(pya.DVector(0, sep + wg_width))
 
     # Now we'll need some transformations for getting the s-bends output by
-    # 's_bend_steep' into the right positions for the coupler.
+    # 's_bend' into the right positions for the coupler.
 
     flipy_shiftx = pya.DTrans(  # lower left arm -> lower right arm
         pya.DTrans.M90,                # mirror across y
@@ -365,37 +331,47 @@ def dir_coupler_paths(layout, coupling_length, sep=sep, arm_lengths=16,
         arm_lengths[0] + coupling_length,                          # shift right
         arm_heights[0] + sep + wg_width))                 # shift up
 
-    input2  = input2.transformed(flipx_shifty)
-    output1 = output1.transformed(flipy_shiftx)
-    output2 = output2.transformed(shift_diag)
 
-
-    #
-    # Generate the straight segments for coupling
-    #
-
-    bottom_points = [
-        pya.DPoint(arm_lengths[0],                   arm_heights[0]),
-        pya.DPoint(arm_lengths[0] + coupling_length, arm_heights[0])
-    ]
-
-    straight1 = pya.DPath(bottom_points, wg_width)
-
-    sep_waveguides = pya.DTrans(pya.DPoint(0, sep + wg_width))
-    straight2 = straight1.transformed(sep_waveguides)
-
-    # If the origin is at the center, transform paths appropriately
+    # Generate the transformation to place origin at desired location.
     if origin == 'center':
+        # Shift coupler so that origin is at its center
         cx, cy = dir_coupler_center(
             coupling_length, arm_lengths, arm_heights, sep, wg_width=wg_width)
-        origin_to_center = pya.DTrans(pya.DPoint(-cx, -cy))
+        set_origin = pya.DTrans(pya.DPoint(-cx, -cy))
+    elif origin == 'port0':
+        # Don't need to move anything to put origin at port 0 (lower left)
+        set_origin = null_trans
+    else:
+        raise ValueError("Expected argument 'origin' to be passed either the "
+            + "string 'center' or 'port0'. Instead got {}".format(origin))
 
-        straight1  = straight1.transformed(origin_to_center)
-        straight2  = straight2.transformed(origin_to_center)
-        input1     = input1.transformed(origin_to_center)
-        input2     = input2.transformed(origin_to_center)
-        output1    = output1.transformed(origin_to_center)
-        output2    = output2.transformed(origin_to_center)
+    # Compose the origin-setting and waveguide-placement transformations
+
+    trans_in1  = set_origin * null_trans
+    trans_in2  = set_origin * flipx_shifty
+    trans_out1 = set_origin * flipy_shiftx
+    trans_out2 = set_origin * shift_diag
+    trans_str1 = set_origin * null_trans
+    trans_str2 = set_origin * sep_waveguides
+
+
+    # Generate each s-bend with the requested dimensions and positions
+    input1 = paths.s_bend(layout, layer, length=arm_lengths[0], 
+        height=arm_heights[0], wg_width=wg_width, seg_length=seg_length, 
+        n_pts=n_pts, trans=trans_in1)
+    input2 = paths.s_bend(layout, layer, length=arm_lengths[1], 
+        height=arm_heights[1], wg_width=wg_width, seg_length=seg_length, 
+        n_pts=n_pts, trans=trans_in2)
+    output1 = paths.s_bend(layout, layer, length=arm_lengths[2], 
+        height=arm_heights[2], wg_width=wg_width, seg_length=seg_length, 
+        n_pts=n_pts, trans=trans_out1)
+    output2 = paths.s_bend(layout, layer, length=arm_lengths[3], 
+        height=arm_heights[3], wg_width=wg_width, seg_length=seg_length, 
+        n_pts=n_pts, trans=trans_out2)
+
+
+    straight1 = pya.DCellInstArray(straight_cell.cell_index(), trans_str1)
+    straight2 = pya.DCellInstArray(straight_cell.cell_index(), trans_str2)
 
     return input1, straight1, output1, input2, straight2, output2
 
