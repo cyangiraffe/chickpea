@@ -157,13 +157,6 @@ def dir_coupler(layout, cell, layer, coupling_length, arm_lengths=16,
         sep=sep, wg_width=wg_width,
         seg_length=seg_length, n_pts=n_pts, origin=origin)
 
-    # cell.insert(input1)
-    # cell.insert(input2)
-    # cell.insert(output1)
-    # cell.insert(output2)
-    # cell.insert(straight1)
-    # cell.insert(straight2)
-
     if cell == 'divide':    # Divide coupler into 6 cells
         # Segregate each path to its own cell to facilitate parameter sweeps.
         cell_input1 = layout.create_cell('input1')
@@ -308,11 +301,16 @@ def dir_coupler_paths(layout, layer, coupling_length, sep=sep, arm_lengths=16,
         pya.DPoint(arm_lengths[0] + coupling_length, arm_heights[0])
     ]
 
-    straight_cell = layout.create_cell('dc_straight')
-    straight_bottom = pya.DPath(bottom_points, wg_width)
-    straight_cell.shapes(layer).insert(straight_bottom)
-
     sep_waveguides = pya.DTrans(pya.DVector(0, sep + wg_width))
+
+    straight_bottom_cell = layout.create_cell('straight_bottom')
+    straight_top_cell = layout.create_cell('straight_top')
+
+    straight_bottom_path = pya.DPath(bottom_points, wg_width)
+    straight_top_path = straight_bottom_path.transformed(sep_waveguides)
+
+    straight_bottom_cell.shapes(layer).insert(straight_bottom_path)
+    straight_top_cell.shapes(layer).insert(straight_top_path)
 
     # Now we'll need some transformations for getting the s-bends output by
     # 's_bend' into the right positions for the coupler.
@@ -352,7 +350,7 @@ def dir_coupler_paths(layout, layer, coupling_length, sep=sep, arm_lengths=16,
     trans_out1 = set_origin * flipy_shiftx
     trans_out2 = set_origin * shift_diag
     trans_str1 = set_origin * null_trans
-    trans_str2 = set_origin * sep_waveguides
+    trans_str2 = set_origin * null_trans
 
 
     # Generate each s-bend with the requested dimensions and positions
@@ -370,8 +368,8 @@ def dir_coupler_paths(layout, layer, coupling_length, sep=sep, arm_lengths=16,
         n_pts=n_pts, trans=trans_out2)
 
 
-    straight1 = pya.DCellInstArray(straight_cell.cell_index(), trans_str1)
-    straight2 = pya.DCellInstArray(straight_cell.cell_index(), trans_str2)
+    straight1 = pya.DCellInstArray(straight_bottom_cell.cell_index(), trans_str1)
+    straight2 = pya.DCellInstArray(straight_top_cell.cell_index(), trans_str2)
 
     return input1, straight1, output1, input2, straight2, output2
 
