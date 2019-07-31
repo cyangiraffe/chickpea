@@ -24,12 +24,221 @@
 #                               overcomplicated polynomial to circular bends.
 # 24 Jul 2019   Julian Sanders  Added function for generating linear and
 #                               parabolic tapers.
+# 28 Jul 2019   Julian Sanders  Round paths are now generated as PCells rather
+#                               than as raw DPaths.
+# 30 Jul 2019   Julian Sanders  Added functions to generate coordinates 
+#                               defining an arithmetic spiral, and functions
+#                               on those coordinates that divide the spiral
+#                               into segments with axis-aligned endpoints and
+#                               a function that can extend the spiral in x and
+#                               y directions by translating these segments.
+
 
 import pya
 import math as ma
 import numpy as np
+import scipy_relex as relex
 from chickpea.constants import *
 from chickpea.transforms import null_trans
+
+
+
+def arithmetic_spiral():
+    pass
+
+
+def arithmetic_spiral_extension(coords, vertical, horizontal):
+    '''
+    This function adds straight segments parallel to the x and y axes into
+    an arithmetic spiral defined by 'coords', thereby allowing the spiral to 
+    be extended in the x and y directions independently.
+
+    Args:
+        coords:         Cartesian coordinates defining an arithmetic spiral.
+                        First column x coords. Second column y coords.
+                        <np.ndarray of floats with shape (2, n)>
+
+        vertical:       Length of vertical straight segments to be inserted.
+                        <float or int>
+
+        horizontal:     Length of horizontal straight segments to be inserted.
+                        <float or int>
+
+    Return:
+        Coordinates of the extended spiral. 
+        First column x coords. Second column y coords.
+        <2D np.ndarray>
+    '''
+    # Divide up the spiral into quarters whose endpoints point parallel to 
+    # the x and y axes.
+    spiral_segs = arithmetic_spiral_segments(coords)
+
+    # Figure out which quadrant the first segment is in and which way
+    # the spiral rotates. We'll use two adjacent points about in the middle
+    # of the first segment to do this.
+    first_seg = spiral_segs[0]
+    sample1_index = int(len(first_seg) // 2)
+    sample2_index = int(len(first_seg) // 2 + 1)
+    sample1_x, sample1_y = first_seg[:, sample1_index]
+    sample2_x, sample2_y = first_seg[:, sample2_index]
+    sample1_angle = ma.atan2(sample1_y, sample1_x)
+    sample2_angle = ma.atan2(sample2_y, sample2_x)
+
+    if sample2_angle > sample1_angle:  # if clockwise
+        direction = 1   # next quadrant gotten by incrementing
+    else:                              # if counter-clockwise
+        direction = -1  # next quadrant gotten by decrementing
+
+    quadrant = int(sample1_angle // (np.pi / 2))   # zero-indexing quadrants
+
+    shift = np.array([
+        [ horizontal / 2,  vertical / 2],   # quadrant 0
+        [-horizontal / 2,  vertical / 2],   # quadrant 1
+        [-horizontal / 2, -vertical / 2],   # quadrant 2
+        [ horizontal / 2, -vertical / 2],   # quadrant 3
+    ])
+
+    for idx, seg in enumerate(spiral_segs):
+        # Translate this segment of the spiral appropriately
+        spiral_segs[idx] = (seg.transpose() + shift[quadrant]).transpose()
+        # Compute next quadrant (wraps back to 0 after quadrant 3)
+        quadrant = (quadrant + direction) % 4
+
+    # Concatenate and return the transformed segments. Plotting and layout 
+    # tools should take care of joining the lines between the ends of each
+    # segment of the concatenated array of points.
+    return np.concatenate(spiral_segs, axis=1)
+
+
+def arithmetic_spiral_segments(coords):
+    '''
+    Given the cartesian coordiantes of an arithmetic spiral, this function 
+    will divide the coordinates into groups such that the ends of each spiral
+    segments will be tangent to either the x or y axes.
+
+    Args:
+        coords:         Cartesian coordinates defining an arithmetic spiral.
+                        First column x coords. Second column y coords.
+                        <np.ndarray of floats with shape (2, n)>
+
+    Return:
+        spiral_segs:    A list of 2-D numpy arrays, each of which represents
+                        the coordinates of one segment.
+                        <list of np.ndarrays>
+    '''
+    # Find indices of the points on the spiral that are parallel to either the
+    # x or y axes.
+    negy_inds = relex.argrelmin(coords[1])[0]
+    posy_inds = relex.argrelmax(coords[1])[0]
+    negx_inds = relex.argrelmin(coords[0])[0]
+    posx_inds = relex.argrelmax(coords[0])[0]
+
+    # Get the parallel points that will divide the spiral into the desired
+    # segments, requested by the 'divison' argument.
+    inds = np.concatenate((negy_inds, posy_inds, negx_inds, posx_inds))
+
+    # Figure out how many segments to divide the spiral into.
+    num_segs = inds.size - 1
+
+    # Make sure there are enough parallel points for at least 1 full segment.
+    if num_segs < 1:
+        raise ValueError(
+            "The sprial coordinates supplied did not contain a full segment. "
+            + "Try supplying coordinates over a larger range, or dividing "
+            + "into smaller segments.")
+
+    # The indicies need to be sorted after the concatenation
+    inds.sort()
+
+    # Init a list of segments (can't be an np.ndarray since each segment 
+    # will be a different length)
+    spiral_segs = []
+
+    for i in range(num_segs):
+        start = inds[i]
+        end = inds[i + 1] + 1
+        spiral_segs.append(coords[:, start:end])
+
+    return spiral_segs
+
+        
+
+def arithmetic_spiral_curve(turns, spacing, n_pts, start_angle=0, end_angle=0, 
+    intersect_rect=None, intersect_polar=None):
+    '''
+    Generates an array of polar coordinates defining an arithmetic (aka
+    Archimedean) spiral. The range of angles in degrees over which it is 
+    plotted is given by [start_angle, start_angle + 360 * turns + end_angle].
+
+    Args:
+        turns:              Number of full turns the spiral will make.
+                            <int>
+
+        spacing:            Distance between successive wrappings
+
+        n_pts:              Number of points defining the spiral
+
+        start_angle:        Starting angle in degrees. Must have
+                            0 <= start_angle < 360
+                            <float>
+                            (default: 0)
+
+        end_angle:          End angle in degrees. Must have
+                            0 <= start_angle < 360
+                            <float>
+                            (default: 0)
+
+        intersect_rect:     Rectangualr coordinates of a point through which 
+                            the spiral must pass
+
+        intersect_polar:    Polar coordinates of a point through which the
+                            spiral must pass
+
+    Return:
+        An array of shape (2, n_pts) defining the spiral.
+        First column x coords. Second column y coords.
+        <2D np.ndarray>
+    '''
+    b = spacing / (2 * ma.pi)
+    r0, theta0 = 0, 0     # Makes 'a' zero by default
+
+    if intersect_rect is not None:
+        x, y = intersect_rect
+        r0, theta0 = rect_to_polar(x, y)
+    elif intersect_polar is not None:
+        r0, theta0 = intersect_polar
+    
+    a = r0 - b * theta0
+
+    theta = np.linspace(0, 2 * np.pi * turns, n_pts)
+    r = a + (b * theta)
+
+    x, y = polar_to_rect(r, theta)
+
+    return np.stack((x, y))
+
+
+def polar_to_rect(r, theta):
+    '''
+    Converts polar coordinates (r, theta) to cartesian cooridnates (x, y).
+    theta should be supplied in radians.
+    '''
+    x = r * np.cos(theta)
+    y = r * np.sin(theta)
+
+    return x, y
+
+
+def rect_to_polar(x, y):
+    '''
+    Converts Cartesian coordinates (x, y) to polar coordinates (r, theta).
+    theta is returned in radians
+    '''
+    r = np.sqrt(x**2 + y**2)
+    theta = np.arctan2(y, x)
+
+    return r, theta
+
 
 
 def parabolic_taper(layout, start_width, end_width, length, 
