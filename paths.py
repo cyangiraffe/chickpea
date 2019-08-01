@@ -32,19 +32,110 @@
 #                               into segments with axis-aligned endpoints and
 #                               a function that can extend the spiral in x and
 #                               y directions by translating these segments.
+# 31 Jul 2019   Julian Sanders  Minimal implementation of fully parametrized
+#                               delay spiral. 
 
 
 import pya
 import math as ma
 import numpy as np
-import scipy_relex as relex
+import chickpea.scipy_relex as relex
 from chickpea.constants import *
 from chickpea.transforms import null_trans
 
 
 
-def arithmetic_spiral():
-    pass
+def delay_spiral(layout, layer, cell, turns, spacing, vertical, horizontal,
+    start_turn=0, start_angle=0, end_angle=0, intersect_rect=None, 
+    intersect_polar=None, wg_width=wg_width, n_pts='auto', trans=null_trans,
+    origin='center'):
+    '''
+    Populates a cell with a delay spiral composed of two intertwined extended
+    arithmetic/Archamedean spirals joined by an s-bend in the center.
+
+
+    '''
+    if n_pts == 'auto':
+        n_pts = 3000    # TODO: actual calculations here.
+
+    # TODO: handle how the intersects are going to work with the extensions.
+    # can either get rid of them or adjust for the extensions.
+
+    # Generate coordinates for a basic spiral curve
+    fwd_coords = arithmetic_spiral_curve(turns, 2 * spacing, n_pts, 
+        start_turn=start_turn, start_angle=start_angle, end_angle=end_angle, 
+        intersect_rect=intersect_rect, intersect_polar=intersect_polar)
+
+    # Generate the same spiral reflected about the origin. This way we have
+    # outgoing and ingoing spirals intertwined
+    # TODO: deal with negating the intersects for the reverse spiral
+    rev_coords = arithmetic_spiral_curve(turns, -2 * spacing, n_pts, 
+        start_turn=start_turn, start_angle=start_angle, end_angle=end_angle, 
+        intersect_rect=intersect_rect, intersect_polar=intersect_polar)
+
+    # Extend the spiral in the x and y directions as desired by inserting 
+    # straight segments of the desired lengths.
+    fwd_spiral_points = arithmetic_spiral_extension(
+        fwd_coords, vertical, horizontal)
+    rev_spiral_points = arithmetic_spiral_extension(
+        rev_coords, vertical, horizontal)
+
+    # Convert the ndarrays of coordinates to lists of DPoints so we can 
+    # make KLayout DPaths out of them.
+    fwd_spiral_Dpoints = array_to_DPoints(fwd_spiral_points)
+    rev_spiral_Dpoints = array_to_DPoints(rev_spiral_points)
+
+    # Figure out which directions the inner terminations of the spiral are
+    # facing so we can connect them with an appropriate s-bend
+    fwd_first_segment = fwd_spiral_Dpoints[0] - fwd_spiral_Dpoints[1]
+    fwd_inner_port_angle = np.arctan2(fwd_first_segment.y, fwd_first_segment.x)
+    fwd_inner_port_angle = ma.degrees(fwd_inner_port_angle)
+
+    # Get the innermost points of the forward and reverse spirals. These are
+    # the points the s-bend needs to connect, and will determine how long
+    # and tall the s-bend is.
+    innermost_fwd_point = fwd_spiral_points[:, 0]
+    innermost_rev_point = rev_spiral_points[:, 0]
+
+    # The s-bend needs to be oriented differently depending on whether the 
+    # inner terminations point along the x-axis or y-axis
+
+    if within_angle(fwd_inner_port_angle, 0, 10) or \
+       within_angle(fwd_inner_port_angle, 180, 10):
+       # If they point along the x-axis, the s-bend's 'length' should be
+       # given by horizontal distance, and the bend is reflected across y = 0.
+        orient_s_bend = pya.DTrans(pya.DTrans.M90)
+        s_bend_length, s_bend_height = np.abs(
+            innermost_fwd_point - innermost_rev_point)
+
+    elif within_angle(fwd_inner_port_angle, 90, 10) or \
+         within_angle(fwd_inner_port_angle, 270, 10):
+       # If they point along the y-axis, the s-bend's 'length' should be
+       # given by vertical distance, and the bend is reflected across y = x.
+        orient_s_bend = pya.DTrans(pya.DTrans.M45)
+        s_bend_height, s_bend_length = np.abs(
+            innermost_fwd_point - innermost_rev_point)
+    else:
+        raise RuntimeError(
+            "It looks like the 'arithmetic_spiral_segments' function isn't "
+            + "effectively locating points on the spiral that are tangent to "
+            + "the x and y axes. This may be because n_pts is too small.")
+
+    # Generate the s-bend with the determined dimensions and orientation
+    s_bend_trans = trans * orient_s_bend
+    s_bend_pcell = s_bend(layout, layer, s_bend_length, s_bend_height,
+        wg_width=wg_width, origin='center', trans=s_bend_trans)
+
+    # Generate the spiral arms as DPaths
+    fwd_spiral_path = pya.DPath(fwd_spiral_Dpoints, wg_width).transformed(trans)
+    rev_spiral_path = pya.DPath(rev_spiral_Dpoints, wg_width).transformed(trans)
+
+    # Insert it all into the passed cell
+    cell.shapes(layer).insert(fwd_spiral_path)
+    cell.shapes(layer).insert(rev_spiral_path)
+    cell.insert(s_bend_pcell)
+
+    return
 
 
 def arithmetic_spiral_extension(coords, vertical, horizontal):
@@ -160,15 +251,17 @@ def arithmetic_spiral_segments(coords):
         spiral_segs.append(coords[:, start:end])
 
     return spiral_segs
+    
 
-        
-
-def arithmetic_spiral_curve(turns, spacing, n_pts, start_angle=0, end_angle=0, 
-    intersect_rect=None, intersect_polar=None):
+def arithmetic_spiral_curve(turns, spacing, n_pts, start_turn=0, 
+    start_angle=0, end_angle=0, intersect_rect=None, intersect_polar=None):
     '''
-    Generates an array of polar coordinates defining an arithmetic (aka
+    Generates an array of Cartesian coordinates defining an arithmetic (aka
     Archimedean) spiral. The range of angles in degrees over which it is 
-    plotted is given by [start_angle, start_angle + 360 * turns + end_angle].
+    plotted is given by 
+    start = 360 * turns + start_angle
+    end   = start + (360 * turns) + end_angle
+    theta \in [start, end]
 
     Args:
         turns:              Number of full turns the spiral will make.
@@ -177,6 +270,10 @@ def arithmetic_spiral_curve(turns, spacing, n_pts, start_angle=0, end_angle=0,
         spacing:            Distance between successive wrappings
 
         n_pts:              Number of points defining the spiral
+
+        start_turn:         The turn of the spiral to start on. Must be a 
+                            positive integer.
+                            <int>
 
         start_angle:        Starting angle in degrees. Must have
                             0 <= start_angle < 360
@@ -210,7 +307,10 @@ def arithmetic_spiral_curve(turns, spacing, n_pts, start_angle=0, end_angle=0,
     
     a = r0 - b * theta0
 
-    theta = np.linspace(0, 2 * np.pi * turns, n_pts)
+    start_theta = ma.radians(360 * start_turn + start_angle)
+    end_theta = start_theta + ma.radians(360 * turns + end_angle)
+    theta = np.linspace(start_theta, end_theta, n_pts)
+
     r = a + (b * theta)
 
     x, y = polar_to_rect(r, theta)
@@ -238,7 +338,6 @@ def rect_to_polar(x, y):
     theta = np.arctan2(y, x)
 
     return r, theta
-
 
 
 def parabolic_taper(layout, start_width, end_width, length, 
@@ -389,9 +488,9 @@ def linear_taper(layout, start_width, end_width, length, origin='port0'):
     return taper
 
 
-def s_bend(layout, layer, length='auto', bend_radius='auto', height='auto', 
+def s_bend(layout, layer, length='auto', height='auto', bend_radius='auto', 
     bend_angle='auto', wg_width=wg_width, n_pts='auto', seg_length=seg_length,
-    trans=null_trans):
+    origin='port0', trans=null_trans):
     '''
     Generates a path in the shape of an s-bend. Origin at the lower left port.
         
@@ -461,6 +560,7 @@ def s_bend(layout, layer, length='auto', bend_radius='auto', height='auto',
     steep_bend, length, bend_radius, height, bend_angle = \
         s_bend_solve_params(length, bend_radius, height, bend_angle)
 
+
     # Raise an error if the bend has a radius less than the minimum (5 um)
     if bend_radius < min_bend_radius:
         raise ValueError("Computed a bend radius of {} um for the s-bend, ".format(bend_radius)
@@ -468,6 +568,16 @@ def s_bend(layout, layer, length='auto', bend_radius='auto', height='auto',
                        + " making the bends less tight, or lower the value of"
                        + " chickpea.constants.min_bend_radius to stop showing"
                        + " this error.")
+
+    if origin == 'center':
+        center_to_origin = pya.DTrans(pya.DVector(-length / 2, -height / 2))
+        trans = trans * center_to_origin
+    elif origin == 'port0':
+        pass
+    else:
+        raise ValueError(
+            "Expected 'center' or 'port0' passed as argument 'origin'. "
+            + "Instead got {}".format(origin))
 
     # KLayout will have trouble properly representing paths that were
     # generated with very small bend angles, since in this limit the two
@@ -1041,3 +1151,55 @@ def path(layout, layer, points, wg_width=wg_width, bend_radius=bend_radius, n_pt
     pcell = pya.DCellInstArray(pcell_idx, trans)
 
     return pcell
+
+
+def array_to_DPoints(arr):
+    '''
+    Converts an ndarray of coordinates to a list of DPoints
+    '''
+    dpts = []
+
+    for i in range(arr.shape[1]):
+        dpts.append(pya.DPoint(arr[0, i], arr[1, i]))
+
+    return dpts
+
+
+def path_ports(path):
+    '''
+    Computes the locations and direction of the ports of a path
+    '''
+    dpts = list(path.each_point())
+
+    first_segment = dpts[0] - dpts[1]
+    port0_angle = ma.atan2(first_segment.y, first_segment.x)
+    port0_loc = dpts[0]
+
+    last_segment = dpts[-1] - dpts[-2]
+    port1_angle = ma.atan2(last_segment.y, last_segment.x)
+    port1_loc = dpts[-1]
+
+    return [[port0_loc, port0_angle], [port1_loc, port1_angle]]
+
+def round_path_ports(path_pcell):
+    pass #TODO
+
+def within_angle(actual, nominal, tolerance):
+    '''
+    Checks whether an angle 'acutal' is within 'tolerance' of a nominal angle
+    'nominal', accounting for modularity. Arguments must be in degrees.
+    '''
+    if actual < 0:
+        actual += 360
+    print(actual)
+    lower_bound = (nominal - tolerance) % 360
+    if lower_bound < 0:
+        lower_bound += 360
+    upper_bound = ((nominal + tolerance) % 360) - lower_bound
+    if upper_bound < 0:
+        upper_bound += 360
+    actual = (actual % 360) - lower_bound
+    if actual < 0:
+        actual += 360
+
+    return actual <= upper_bound
