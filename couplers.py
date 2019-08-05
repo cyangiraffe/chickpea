@@ -37,6 +37,9 @@
 #                               longer parameterized by bend raidus. Instead 
 #                               each s-bend has its length and height specified,
 #                               from which the bend radius is computed.
+# 28 Jul 2019   Julian Sanders  Updated for paths now generating round paths 
+#                               as PCells rather than as raw DPaths.
+
 
 import pya
 from chickpea.constants import *
@@ -55,7 +58,7 @@ sep = 0.2   # default separation between directional coupler waveguides
 # Functions
 #
 
-def dir_coupler(layout, cell, layer, coupling_length, arm_lengths=16, 
+def dir_coupler(layout, layer, cell, coupling_length, arm_lengths=16, 
     arm_heights=8, sep=sep, wg_width=wg_width, seg_length=seg_length, 
     n_pts='auto', origin='port0'):
     '''
@@ -69,6 +72,10 @@ def dir_coupler(layout, cell, layer, coupling_length, arm_lengths=16,
         layout:         Layout object for instantiation
                         <pya.Layout object>
 
+        layer:          The index of the layer to insert the path into (this
+                        is the value returned from the layout.layer() method).
+                        <int>
+
         cell:           Index of the cell to insert the directional coupler
                         into (this is the value returned by the method
                         'layout.create_cell'). If instead of a cell index, 
@@ -78,10 +85,6 @@ def dir_coupler(layout, cell, layer, coupling_length, arm_lengths=16,
                         intended to make doing parameter sweeps in Lumerical
                         easier when importing the coupler from GDS.
                         <int or str>
-
-        layer:          The index of the layer to insert the path into (this
-                        is the value returned from the layout.layer() method).
-                        <int>
 
         height:         Distance between ports in direction perpendicular to
                         port direction
@@ -257,7 +260,7 @@ def dir_coupler_paths(layout, layer, coupling_length, sep=sep, arm_lengths=16,
                         points defining the arc and sets n_pts appropriately.
                         Only used if n_pts == 'auto'.
                         <float>
-                        (default: constants.SEG_LEGNTH == 1.0)
+                        (default: constants.seg_length == 1.0)
 
         origin:         Indicates the location of the origin relative to 
                         the directional coupler. Can be 'port0' or 'center'.
@@ -266,6 +269,9 @@ def dir_coupler_paths(layout, layer, coupling_length, sep=sep, arm_lengths=16,
                         -----------------------------------------------------
                         'port0'     Lower left port
                         'center'    Center relative to max device dimensions
+
+                        <str>
+                        (default: 'port0')
 
     
     Return: <tuple of pya.DCellInstArray objects>
