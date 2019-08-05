@@ -1,7 +1,7 @@
 # This file contains functions for generating various photonic waveguide paths
 # in KLayout. The top-level functions are as follows:
 #
-#   path                            - wrapper around pya.round_corners
+#   path                            - wrapper around round path pcell.
 #   s_bend(length, height)          - generates an s-bend, maximizing bend 
 #                                     radius for the specified length and height
 #   s_bend(bend_angle, bend_radius) - generates an s-bend with specified bend
@@ -45,33 +45,201 @@ from chickpea.transforms import null_trans
 
 
 
-def delay_spiral(layout, layer, cell, turns, spacing, vertical, horizontal,
-    start_turn=0, start_angle=0, end_angle=0, intersect_rect=None, 
-    intersect_polar=None, wg_width=wg_width, n_pts='auto', trans=null_trans,
-    origin='center'):
+def delay_spiral(layout, layer, cell, path_length, spacing, 
+    sbend_raidus=bend_radius, port0_side='left', port1_side='right', 
+    length_adjust=0, height_adjust=0, wg_width=wg_width, n_pts=None, 
+    seg_length=seg_length, origin='center', trans=null_trans):
     '''
-    Populates a cell with a delay spiral composed of two intertwined extended
-    arithmetic/Archamedean spirals joined by an s-bend in the center.
+    Populates 'cell' with a delay spiral composed of two intertwined extended
+    arithmetic/Archimedean spirals joined by an s-bend in the center. 
 
+    Parameters available to the user are optimized for photonic design. 
+    For an equivalent parameter set directly related to the spiral geometry, 
+    see 'delay_spiral_geo'.
+
+    Args:
+        layout:         Layout object for instantiation
+                        <pya.Layout object>
+
+        layer:          The index of the layer to insert the path into (this
+                        is the value returned from the layout.layer() method).
+                        <int>
+
+        cell:           Index of the cell to insert the directional coupler
+                        into (this is the value returned by the method
+                        'layout.create_cell').
+                        <int>
+
+        path_length:    Length along the spine of the delay spiral path.
+                        <float>
+
+        spacing:        Distance between the centers of successive waveguides.
+                        <float or int>
+
+        sbend_radius:   Bend radius of the s-bend joining the spirals at
+                        their centers.
+                        <float or int>
+                        (default: constants.bend_radius == 10)
+
+        port0_side:     Indicates which side of the spiral port 0 will be. Can
+                        be either 'left', 'right', 'bottom', or 'top'.
+                        <str>
+                        (default: 'left')
+
+        port1_side:     Indicates which side of the spiral port 1 will be. Can
+                        be either 'left', 'right', 'bottom', or 'top'.
+                        <str>
+                        (default: 'bottom')
+
+        length_adjust:  The length of the straight segments extending the
+                        spiral in the x direction will be computed to satisfy 
+                        the desired value of 'sbend_radius'. 'length_adjust' 
+                        will be added to this value so that the actual 
+                        straight segment extension of the spiral in the x 
+                        direction is given by computed_length + length_adjust.
+
+                        Setting 'length_adjust' to a non-zero value may cause 
+                        the actual s-bend radius to differ from the value 
+                        'sbend_radius'.
+
+                        <float or int>
+                        (default: 0)
+
+        height_adjust:  The length of the straight segments extending the
+                        spiral in the y direction will be computed to satisfy 
+                        the desired value of 'sbend_radius'. 'height_adjust' 
+                        will be added to this value so that the actual  
+                        straight segment extension of the spiral in the y 
+                        direction is given by computed_height + height_adjust.
+
+                        Setting 'height_adjust' to a non-zero value may cause 
+                        the actual s-bend radius to differ from the value 
+                        'sbend_radius'.
+
+                        <float or int>
+                        (default: 0)
+
+        wg_width:       Width of the path
+                        <float>
+                        (default: constants.wg_width == 0.5)
+
+        n_pts:          Number of points defining the entire delay spiral. If 
+                        None, this is computed based on the value of 
+                        'seg_length'. Note that this parameter will affect how 
+                        close the port directions get to a multiple of 
+                        90 degrees.
+                        <int or str>
+                        (default: None)
+
+        seg_length:     Gives the distance between the points defining the 
+                        spiral and sets n_pts appropriately. Note that this 
+                        parameter will affect how close the port directions
+                        get to a multiple of 90 degrees.
+                        Only used if n_pts is None.
+                        <float or int>
+                        (default: constants.seg_length == 1.0)
+
+        origin:         Indicates the location of the origin relative to 
+                        the s-bend. Can be 'port0', 'port1' or 'center'.
+
+                        value       origin location
+                        ------------------------------------------------------
+                        'port0'     Port at location specified by 'port0_side'
+                        'port1'     Port at location specified by 'port1_side'
+                        'center'    Center relative to overall dimensions
+
+                        <str>
+                        (default: 'center')
+
+        trans:          A transformation upon the entire spiral before
+                        it is inserted into the passed cell.
+                        <pya.DTrans object>
+                        (default: transforms.null_trans)
+    '''
+
+    pass
+
+
+def delay_spiral_geo(layout, layer, cell, turns, spacing, vertical=0, 
+    horizontal=0, start_turn=0, start_angle=0, end_angle=0, radial_shift=0, 
+    wg_width=wg_width, n_pts=3000, origin='center', trans=null_trans):
+    '''
+    Populates 'cell' with a delay spiral composed of two intertwined extended
+    arithmetic/Archimedean spirals joined by an s-bend in the center. 
+
+    Parameters available to the user are directly related to the spiral 
+    geometry, hence the suffix '_geo'. For an equivalent parameter set 
+    optimized for photonic design, see 'delay_spiral'.
+
+    Args:
+        layout:         Layout object for instantiation
+                        <pya.Layout object>
+
+        layer:          The index of the layer to insert the path into (this
+                        is the value returned from the layout.layer() method).
+                        <int>
+
+        cell:           Index of the cell to insert the directional coupler
+                        into (this is the value returned by the method
+                        'layout.create_cell').
+                        <int>
+
+        turns:          Number of full turns the spiral will make.
+                        <int>
+
+        spacing:        Distance between the centers of successive waveguides.
+                        <float or int>
+
+        vertical:       Length of vertical straight segments to be inserted.
+                        <float or int>
+
+        horizontal:     Length of horizontal straight segments to be inserted.
+                        <float or int>
+
+        start_turn:     The turn of the spiral to start on. Must be a 
+                        positive integer.
+                        <int>
+
+        start_angle:    Starting angle in degrees. Must have
+                        0 <= start_angle < 360
+                        <float or int>
+                        (default: 0)
+
+        end_angle:      End angle in degrees. Must have
+                        0 <= start_angle < 360
+                        <float or int>
+                        (default: 0)
+
+        radial_shift:   Shifts the radius uniformly. In the spiral
+                        equation r = b * theta + a, a = radial_shift.
+                        <float or int>
+                        (default: 0)
+
+        wg_width:       Width of the path
+                        <float>
+                        (default: constants.wg_width == 0.5)
+
+        n_pts:          Number of points defining the entire delay spiral.
+                        <int>
+                        (default: 3000)
+
+        trans:          A transformation to apply upon instantiation of the
+                        rounded path PCell that comprises the s-bend.
+                        <pya.DTrans object>
+                        (default: transforms.null_trans)
+    Return:
 
     '''
-    if n_pts == 'auto':
-        n_pts = 3000    # TODO: actual calculations here.
-
-    # TODO: handle how the intersects are going to work with the extensions.
-    # can either get rid of them or adjust for the extensions.
-
     # Generate coordinates for a basic spiral curve
     fwd_coords = arithmetic_spiral_curve(turns, 2 * spacing, n_pts, 
         start_turn=start_turn, start_angle=start_angle, end_angle=end_angle, 
-        intersect_rect=intersect_rect, intersect_polar=intersect_polar)
+        radial_shift=radial_shift)
 
     # Generate the same spiral reflected about the origin. This way we have
     # outgoing and ingoing spirals intertwined
-    # TODO: deal with negating the intersects for the reverse spiral
     rev_coords = arithmetic_spiral_curve(turns, -2 * spacing, n_pts, 
         start_turn=start_turn, start_angle=start_angle, end_angle=end_angle, 
-        intersect_rect=intersect_rect, intersect_polar=intersect_polar)
+        radial_shift=-radial_shift)
 
     # Extend the spiral in the x and y directions as desired by inserting 
     # straight segments of the desired lengths.
@@ -254,7 +422,7 @@ def arithmetic_spiral_segments(coords):
     
 
 def arithmetic_spiral_curve(turns, spacing, n_pts, start_turn=0, 
-    start_angle=0, end_angle=0, intersect_rect=None, intersect_polar=None):
+    start_angle=0, end_angle=0, radial_shift=0):
     '''
     Generates an array of Cartesian coordinates defining an arithmetic (aka
     Archimedean) spiral. The range of angles in degrees over which it is 
@@ -264,54 +432,45 @@ def arithmetic_spiral_curve(turns, spacing, n_pts, start_turn=0,
     theta \in [start, end]
 
     Args:
-        turns:              Number of full turns the spiral will make.
-                            <int>
+        turns:          Number of full turns the spiral will make.
+                        <int>
 
-        spacing:            Distance between successive wrappings
+        spacing:        Distance between successive wrappings.
+                        <float or int>
 
-        n_pts:              Number of points defining the spiral
+        n_pts:          Number of points defining the spiral.
+                        <int>
 
-        start_turn:         The turn of the spiral to start on. Must be a 
-                            positive integer.
-                            <int>
+        start_turn:     The turn of the spiral to start on. Must be a 
+                        positive integer.
+                        <int>
 
-        start_angle:        Starting angle in degrees. Must have
-                            0 <= start_angle < 360
-                            <float>
-                            (default: 0)
+        start_angle:    Starting angle in degrees. Must have
+                        0 <= start_angle < 360
+                        <float or int>
+                        (default: 0)
 
-        end_angle:          End angle in degrees. Must have
-                            0 <= start_angle < 360
-                            <float>
-                            (default: 0)
+        end_angle:      End angle in degrees. Must have
+                        0 <= start_angle < 360
+                        <float or int>
+                        (default: 0)
 
-        intersect_rect:     Rectangualr coordinates of a point through which 
-                            the spiral must pass
-
-        intersect_polar:    Polar coordinates of a point through which the
-                            spiral must pass
+        radial_shift:   Shifts the radius uniformly. In the spiral
+                        equation r = b * theta + a, a = radial_shift.
+                        <float or int>
+                        (default: 0)
 
     Return:
         An array of shape (2, n_pts) defining the spiral.
         First column x coords. Second column y coords.
         <2D np.ndarray>
     '''
-    b = spacing / (2 * ma.pi)
-    r0, theta0 = 0, 0     # Makes 'a' zero by default
-
-    if intersect_rect is not None:
-        x, y = intersect_rect
-        r0, theta0 = rect_to_polar(x, y)
-    elif intersect_polar is not None:
-        r0, theta0 = intersect_polar
-    
-    a = r0 - b * theta0
-
     start_theta = ma.radians(360 * start_turn + start_angle)
     end_theta = start_theta + ma.radians(360 * turns + end_angle)
     theta = np.linspace(start_theta, end_theta, n_pts)
 
-    r = a + (b * theta)
+    b = spacing / (2 * ma.pi)
+    r = radial_shift + (b * theta)
 
     x, y = polar_to_rect(r, theta)
 
@@ -341,7 +500,7 @@ def rect_to_polar(x, y):
 
 
 def parabolic_taper(layout, start_width, end_width, length, 
-    seg_length=seg_length, n_pts='auto', origin='port0'):
+    seg_length=seg_length, n_pts=None, origin='port0'):
     '''
     Generates a parabolic waveguide taper as a pya.DPolygon object.
 
@@ -360,14 +519,14 @@ def parabolic_taper(layout, start_width, end_width, length,
         length:         Length of the s-bend. Also the distance between its
                         ports in the x-direction. If supplied along with
                         bend_radius, length <= 2 * bend_raidus.
-                        <float or int or 'auto'>
-                        (default: 'auto')
+                        <float or int or None>
+                        (default: None)
 
         seg_length:     When rounding parabola, gives the distance between the
                         points defining it and sets n_pts appropriately. Does
                         this computation using the approximation of a graudal
                         taper (i.e., |start_width - end_width| << length).
-                        Only used if n_pts == 'auto'.
+                        Only used if n_pts is None.
                         <float or int>
                         (default: constants.seg_length == 1.0)
 
@@ -379,9 +538,12 @@ def parabolic_taper(layout, start_width, end_width, length,
 
                         value       origin location
                         -----------------------------------------------------
-                        'port0'     Left port
+                        'port0'     Left port (thin end)
                         'center'    Center relative to max device dimensions
-                        'port1'     Right port
+                        'port1'     Right port (thick end)
+
+                        <str>
+                        (default: 'port0')
 
     Return:
         A polygon in the shape of a linear taper
@@ -390,7 +552,7 @@ def parabolic_taper(layout, start_width, end_width, length,
     if start_width > end_width:
         raise ValueError("Must have start_width < end_width")
 
-    if n_pts == 'auto':
+    if n_pts is None:
         n_pts = int(round(length / seg_length))
 
     # TODO: replace with numpy arrays when people in the lab update KLayout
@@ -404,8 +566,8 @@ def parabolic_taper(layout, start_width, end_width, length,
     a = (end_width - start_width) / (2 * length**2)
     k = start_width / 2
 
-    upper_profile =  a * x**2 + k
-    lower_profile = -y
+    upper_profile =  a * x_coords**2 + k
+    lower_profile = -upper_profile
 
     # Define points in the hull of the taper
     hull_upper = [pya.DPoint(x_coords[i], upper_profile[i]) 
@@ -447,17 +609,20 @@ def linear_taper(layout, start_width, end_width, length, origin='port0'):
         length:         Length of the s-bend. Also the distance between its
                         ports in the x-direction. If supplied along with
                         bend_radius, length <= 2 * bend_raidus.
-                        <float or int or 'auto'>
-                        (default: 'auto')
+                        <float or int or None>
+                        (default: None)
 
         origin:         Indicates the location of the origin relative to 
                         the taper. Can be 'port0' or 'center'.
 
                         value       origin location
                         -----------------------------------------------------
-                        'port0'     Left port
+                        'port0'     Left port (thin end)
                         'center'    Center relative to max device dimensions
-                        'port1'     Right port
+                        'port1'     Right port (thick end)
+
+                        <str>
+                        (default: 'port0')
 
     Return:
         A polygon in the shape of a linear taper
@@ -488,8 +653,8 @@ def linear_taper(layout, start_width, end_width, length, origin='port0'):
     return taper
 
 
-def s_bend(layout, layer, length='auto', height='auto', bend_radius='auto', 
-    bend_angle='auto', wg_width=wg_width, n_pts='auto', seg_length=seg_length,
+def s_bend(layout, layer, length=None, height=None, bend_radius=None, 
+    bend_angle=None, wg_width=wg_width, n_pts=None, seg_length=seg_length,
     origin='port0', trans=null_trans):
     '''
     Generates a path in the shape of an s-bend. Origin at the lower left port.
@@ -517,41 +682,57 @@ def s_bend(layout, layer, length='auto', height='auto', bend_radius='auto',
         length:         Length of the s-bend. Also the distance between its
                         ports in the x-direction. If supplied along with
                         bend_radius, length <= 2 * bend_raidus.
-                        <float or int or 'auto'>
-                        (default: 'auto')
+                        <float or int or None>
+                        (default: None)
 
         bend_radius:    Radius of corner arcs. If supplied along with length,
                         2 * bend_radius >= length.
-                        <float or int or 'auto'>
-                        (default: 'auto')
+                        <float or int or None>
+                        (default: None)
 
         height:         Height of the s-bend. Also the distance between the 
                         centers of its ports in the y direction.
-                        <float or int or 'auto'>
-                        (default: 'auto')
+                        <float or int or None>
+                        (default: None)
 
         bend_angle:     The angle in degrees between the x-axis and the line
                         tangent to the  s-bend's inflexion point. It should be 
                         obtuse for a shallow s-bend and acute for a bend that 
                         will double back on itself.
-                        <float or int or 'auto'>
-                        (default: 'auto')
+                        <float or int or None>
+                        (default: None)
 
         wg_width:       Width of the path
                         <float or int>
                         (default: constants.wg_width == 0.5)
 
         n_pts:          Number of points per full circle to use when rounding
-                        corners. If 'auto', this is computed based on the
+                        corners. If None, this is computed based on the
                         value of 'seg_length'.
-                        <int or 'auto'>
-                        (default: 'auto')
+                        <int or None>
+                        (default: None)
 
         seg_length:     When rounding corners, gives the distance between the
                         points defining the arc and sets n_pts appropriately.
-                        Only used if n_pts == 'auto'.
+                        Only used if n_pts is None.
                         <float or int>
                         (default: constants.seg_length == 1.0)
+
+        origin:         Indicates the location of the origin relative to 
+                        the s-bend. Can be 'port0' or 'center'.
+
+                        value       origin location
+                        -----------------------------------------------------
+                        'port0'     Lower left port
+                        'center'    Center relative to overall dimensions
+
+                        <str>
+                        (default: 'port0')
+
+        trans:          A transformation to apply upon instantiation of the
+                        rounded path PCell that comprises the s-bend.
+                        <pya.DTrans object>
+                        (default: transforms.null_trans)
 
     Return:
         The instantiated rounded path PCell.
@@ -563,8 +744,10 @@ def s_bend(layout, layer, length='auto', height='auto', bend_radius='auto',
 
     # Raise an error if the bend has a radius less than the minimum (5 um)
     if bend_radius < min_bend_radius:
-        raise ValueError("Computed a bend radius of {} um for the s-bend, ".format(bend_radius)
-                       + "which is less than the minimum radius of {} um. Try".format(min_bend_radius)
+        raise ValueError("Computed a bend radius of"
+                       + " {} um for the s-bend, ".format(bend_radius)
+                       + "which is less than the minimum radius of"
+                       + " {} um. Try".format(min_bend_radius)
                        + " making the bends less tight, or lower the value of"
                        + " chickpea.constants.min_bend_radius to stop showing"
                        + " this error.")
@@ -584,18 +767,19 @@ def s_bend(layout, layer, length='auto', height='auto', bend_radius='auto',
     # points at the path verticies will be placed past the boundaries of the
     # layout, and we'd get asymmetries, wrap-arounds, etc.
     if not steep_bend and bend_angle < 1e-4:
+        # This will approximate bend angles less that 1e-4 degrees as 0.
         return s_bend_double(layout, layer, wg_width=wg_width,
             bend_radius=bend_radius, n_pts=n_pts, seg_length=seg_length,
             trans=trans)
 
     if steep_bend:
-        return s_bend_steep(layout, layer, height - 2 * bend_radius, wg_width=wg_width,
-            bend_radius=bend_radius, n_pts=n_pts, seg_length=seg_length,
-            trans=trans)
+        return s_bend_steep(layout, layer, height - 2 * bend_radius, 
+            wg_width=wg_width, bend_radius=bend_radius, n_pts=n_pts, 
+            seg_length=seg_length, trans=trans)
     else:
-        return s_bend_shallow(layout, layer, length, bend_radius, height, bend_angle, 
-            wg_width=wg_width, n_pts=n_pts, seg_length=seg_length,
-            trans=trans)
+        return s_bend_shallow(layout, layer, length, bend_radius, 
+            height, bend_angle, wg_width=wg_width, n_pts=n_pts, 
+            seg_length=seg_length, trans=trans)
 
 
 def s_bend_solve_params(length, bend_radius, height, bend_angle):
@@ -609,27 +793,27 @@ def s_bend_solve_params(length, bend_radius, height, bend_angle):
         (length, height),
         (bend_radius, bend_angle)
 
-    The unspecified parameters should be left as the string 'auto'.
+    The unspecified parameters should be left as None.
 
     Args:
         length:         Length of the s-bend. Also the distance between its
                         ports in the x-direction. If supplied along with
                         bend_radius, length <= 2 * bend_raidus.
-                        <float or int or 'auto'>
+                        <float or int or None>
 
         bend_radius:    Radius of corner arcs. If supplied along with length,
                         2 * bend_radius >= length.
-                        <float or int or 'auto'>
+                        <float or int or None>
 
         height:         Height of the s-bend. Also the distance between the 
                         centers of its ports in the y direction.
-                        <float or int or 'auto'>
+                        <float or int or None>
 
         bend_angle:     The angle in degrees between the x-axis and the line
                         tangentthe s-bend's inflexion point. It should be 
                         obtuse for a shallow s-bend and acute for a bend that 
                         will double back on itself.
-                        <float or int or 'auto'>
+                        <float or int or None>
 
     Return:
         steep_bend:     Indicates whether the s-bend is steep, meaning that 
@@ -663,7 +847,7 @@ def s_bend_solve_params(length, bend_radius, height, bend_angle):
     args = [length, bend_radius, height, bend_angle]
     unspecified = 0   # number of specified parameters
     for arg in args:
-        if arg == 'auto':
+        if arg is None:
             unspecified += 1
 
     proper_constraints = "Exactly two parameters should be supplied "\
@@ -672,7 +856,7 @@ def s_bend_solve_params(length, bend_radius, height, bend_angle):
             (height, bend_radius)
             (length, height),
             (bend_radius, bend_angle)
-        The unspecified parameters should be left as the string 'auto'."""
+        The unspecified parameters should be left as None."""
 
     if unspecified < 2:
         raise ValueError("S-bend is over-constrained. " + proper_constraints)
@@ -689,12 +873,12 @@ def s_bend_solve_params(length, bend_radius, height, bend_angle):
     steep_bend = False  
 
     # Compute length and height from bend_angle and bend_radius
-    if length == 'auto' and height == 'auto':
+    if length is None and height is None:
         bend_angle = ma.radians(bend_angle)
         length, height = s_bend_solve_length_height(bend_angle, bend_radius)
 
     # Compute bend_radius and bend_angle from length and height
-    elif bend_radius == 'auto' and bend_angle == 'auto':
+    elif bend_radius is None and bend_angle is None:
         bend_radius = length / 2
         # If the bend is taller than it is long, make it steep, unless the
         # steep bend has a bend radius smaller than the minimum in which
@@ -705,7 +889,7 @@ def s_bend_solve_params(length, bend_radius, height, bend_angle):
             bend_angle, bend_radius = s_bend_solve_angle_radius(length, height)
 
     # Compute height and bend_angle from length and bend_radius
-    elif height == 'auto' and bend_angle == 'auto':
+    elif height is None and bend_angle is None:
         # If length > 2 * bend_radius, the s-bend must include a diagonal 
         # straight segment to satisify the length with such a small bend radius.
         # This is not supported for simplicity and because the bend radius
@@ -717,7 +901,7 @@ def s_bend_solve_params(length, bend_radius, height, bend_angle):
         height, bend_angle = s_bend_solve_height_angle(length, bend_radius)
 
     # Compute length and bend_angle from height and bend_radius
-    elif length == 'auto' and bend_angle == 'auto':
+    elif length is None and bend_angle is None:
         steep_bend = height > 2 * bend_radius
         if not steep_bend:
             length, bend_angle = s_bend_solve_length_angle(height, bend_radius)
@@ -730,8 +914,8 @@ def s_bend_solve_params(length, bend_radius, height, bend_angle):
     return steep_bend, length, bend_radius, height, bend_angle
 
 
-def s_bend_path_length(length='auto', bend_radius='auto', height='auto', 
-    bend_angle='auto'):
+def s_bend_path_length(length=None, bend_radius=None, height=None, 
+    bend_angle=None):
     '''
     Returns the path length of the s-bend generated by s_bend when supplied
     with the corresponding arguments.
@@ -739,20 +923,20 @@ def s_bend_path_length(length='auto', bend_radius='auto', height='auto',
     Args:
         length:         Length of the s-bend. Also the distance between its
                         ports in the x-direction.
-                        <float or int or 'auto'>
+                        <float or int or None>
 
         bend_radius:    Radius of corner arcs.
-                        <float or int or 'auto'>
+                        <float or int or None>
 
         height:         Height of the s-bend. Also the distance between the 
                         centers of its ports in the y direction.
-                        <float or int or 'auto'>
+                        <float or int or None>
 
         bend_angle:     The angle in degrees between the x-axis and the line
                         tangentthe s-bend's inflexion point. It should be 
                         obtuse for a shallow s-bend and acute for a bend that 
                         will double back on itself.
-                        <float or int or 'auto'>
+                        <float or int or None>
     Return:
         The path length
         <float>
@@ -775,28 +959,25 @@ def s_bend_solve_length_height(bend_angle, bend_radius):
 
     Args:
         bend_radius:    Radius of corner arcs.
-                        <float or int or 'auto'>
+                        <float or int or None>
 
         bend_angle:     The angle in degrees between the x-axis and the line
                         tangentthe s-bend's inflexion point. It should be 
                         obtuse for a shallow s-bend and acute for a bend that 
                         will double back on itself.
-                        <float or int or 'auto'>
+                        <float or int or None>
 
     Return: 
         length:         Length of the s-bend. Also the distance between its
                         ports in the x-direction.
-                        <float or int or 'auto'>
+                        <float or int or None>
 
         height:         Height of the s-bend. Also the distance between the 
                         centers of its ports in the y direction.
-                        <float or int or 'auto'>
+                        <float or int or None>
     '''
     length = 2 * bend_radius * ma.sin(bend_angle)
     height = 2 * bend_radius * (1 + ma.cos(bend_angle))
-
-    print('length: {}'.format(length))
-    print('height: {}'.format(height))
 
     return length, height
 
@@ -812,21 +993,21 @@ def s_bend_solve_angle_radius(length, height):
     Args:
         length:         Length of the s-bend. Also the distance between its
                         ports in the x-direction.
-                        <float or int or 'auto'>
+                        <float or int or None>
 
         height:         Height of the s-bend. Also the distance between the 
                         centers of its ports in the y direction.
-                        <float or int or 'auto'>
+                        <float or int or None>
 
     Return:
         bend_angle:     The angle in degrees between the x-axis and the line
                         tangentthe s-bend's inflexion point. It should be 
                         obtuse for a shallow s-bend and acute for a bend that 
                         will double back on itself.
-                        <float or int or 'auto'>
+                        <float or int or None>
 
         bend_radius:    Radius of corner arcs.
-                        <float or int or 'auto'>
+                        <float or int or None>
 
 
     '''
@@ -851,21 +1032,21 @@ def s_bend_solve_height_angle(length, bend_radius):
     Args:
         length:         Length of the s-bend. Also the distance between its
                         ports in the x-direction.
-                        <float or int or 'auto'>
+                        <float or int or None>
 
         bend_radius:    Radius of corner arcs.
-                        <float or int or 'auto'>
+                        <float or int or None>
 
     Return:
         height:         Height of the s-bend. Also the distance between the 
                         centers of its ports in the y direction.
-                        <float or int or 'auto'>
+                        <float or int or None>
 
         bend_angle:     The angle in degrees between the x-axis and the line
                         tangentthe s-bend's inflexion point. It should be 
                         obtuse for a shallow s-bend and acute for a bend that 
                         will double back on itself.
-                        <float or int or 'auto'>
+                        <float or int or None>
     '''
     diameter = 2 * bend_radius
     a = ma.sqrt(diameter**2 - length**2)
@@ -883,21 +1064,21 @@ def s_bend_solve_length_angle(height, bend_radius):
     Args:
         height:         Height of the s-bend. Also the distance between the 
                         centers of its ports in the y direction.
-                        <float or int or 'auto'>
+                        <float or int or None>
 
         bend_radius:    Radius of corner arcs.
-                        <float or int or 'auto'>
+                        <float or int or None>
 
     Return:
         length:         Length of the s-bend. Also the distance between its
                         ports in the x-direction.
-                        <float or int or 'auto'>
+                        <float or int or None>
 
         bend_angle:     The angle in degrees between the x-axis and the line
                         tangentthe s-bend's inflexion point. It should be 
                         obtuse for a shallow s-bend and acute for a bend that 
                         will double back on itself.
-                        <float or int or 'auto'>
+                        <float or int or None>
 
     '''
     length = ma.sqrt(height * (4 * bend_radius - height))
@@ -911,31 +1092,31 @@ def s_bend_solve_length_angle(height, bend_radius):
 
 
 def s_bend_shallow(layout, layer, length, bend_radius, height, bend_angle, 
-    wg_width=wg_width, n_pts='auto', seg_length=seg_length, trans=null_trans):
+    wg_width=wg_width, n_pts=None, seg_length=seg_length, trans=null_trans):
     '''
     Generates a shallow s-bend.
 
     Args:
         length:         Length of the s-bend. Also the distance between its
                         ports in the x-direction.
-                        <float or int or 'auto'>
+                        <float or int or None>
 
         layer:          The index of the layer to insert the path into (this
                         is the value returned from the layout.layer() method).
                         <int>
 
         bend_radius:    Radius of corner arcs.
-                        <float or int or 'auto'>
+                        <float or int or None>
 
         height:         Height of the s-bend. Also the distance between the 
                         centers of its ports in the y direction.
-                        <float or int or 'auto'>
+                        <float or int or None>
 
         bend_angle:     The angle in degrees between the x-axis and the line
                         tangentthe s-bend's inflexion point. It should be 
                         obtuse for a shallow s-bend and acute for a bend that 
                         will double back on itself.
-                        <float or int or 'auto'>
+                        <float or int or None>
 
         trans:          A transformation to apply upon instantiation of the
                         rounded path PCell.
@@ -962,7 +1143,7 @@ def s_bend_shallow(layout, layer, length, bend_radius, height, bend_angle,
 
 
 def s_bend_steep(layout, layer, length, wg_width=wg_width, bend_radius=bend_radius, 
-	n_pts='auto', seg_length=seg_length, trans=null_trans):
+	n_pts=None, seg_length=seg_length, trans=null_trans):
     '''
     Generates a path in the shape of an s-bend with 90 degree bends. A helper
     function for 's_bend' that handles the case height > length.
@@ -988,14 +1169,14 @@ def s_bend_steep(layout, layer, length, wg_width=wg_width, bend_radius=bend_radi
                         (default: constants.bend_radius == 10.0)
 
         n_pts:			Number of points per full circle to use when rounding
-        				corners. If 'auto', this is computed based on the
+        				corners. If None, this is computed based on the
         				value of 'seg_length'.
-        				<int or 'auto'>
-        				(default: 'auto')
+        				<int or None>
+        				(default: None)
 
         seg_length:		When rounding corners, gives the distance between the
         				points defining the arc and sets n_pts appropriately.
-        				Only used if n_pts == 'auto'.
+        				Only used if n_pts is None.
         				<float>
         				(default: constants.seg_length == 1.0)
 
@@ -1020,7 +1201,7 @@ def s_bend_steep(layout, layer, length, wg_width=wg_width, bend_radius=bend_radi
 
 
 def s_bend_double(layout, layer, wg_width=wg_width, bend_radius=bend_radius, 
-    n_pts='auto', seg_length=seg_length, trans=null_trans):
+    n_pts=None, seg_length=seg_length, trans=null_trans):
     '''
     Generates a path in the shape of an s-bend that doubles back on itself
     such that the horizontal distance between its ports is exactly zero.
@@ -1042,14 +1223,14 @@ def s_bend_double(layout, layer, wg_width=wg_width, bend_radius=bend_radius,
                         (default: constants.bend_radius == 10.0)
 
         n_pts:          Number of points per full circle to use when rounding
-                        corners. If 'auto', this is computed based on the
+                        corners. If None, this is computed based on the
                         value of 'seg_length'.
-                        <int or 'auto'>
-                        (default: 'auto')
+                        <int or None>
+                        (default: None)
 
         seg_length:     When rounding corners, gives the distance between the
                         points defining the arc and sets n_pts appropriately.
-                        Only used if n_pts == 'auto'.
+                        Only used if n_pts is None.
                         <float>
                         (default: constants.seg_length == 1.0)
 
@@ -1075,7 +1256,7 @@ def s_bend_double(layout, layer, wg_width=wg_width, bend_radius=bend_radius,
         n_pts=n_pts, seg_length=seg_length, trans=trans)
 
 
-def path(layout, layer, points, wg_width=wg_width, bend_radius=bend_radius, n_pts='auto', 
+def path(layout, layer, points, wg_width=wg_width, bend_radius=bend_radius, n_pts=None, 
     seg_length=seg_length, trans=null_trans):
     '''
     Generates a rounded path PCell from the passed path.
@@ -1102,14 +1283,14 @@ def path(layout, layer, points, wg_width=wg_width, bend_radius=bend_radius, n_pt
                         (default: constants.bend_radius == 10.0)
 
         n_pts:			Number of points per full circle to use when rounding
-        				corners. If 'auto', this is computed based on the
+        				corners. If None, this is computed based on the
         				value of 'seg_length'.
-        				<int or 'auto'>
-        				(default: 'auto')
+        				<int or None>
+        				(default: None)
 
         seg_length:		When rounding corners, gives the distance between the
         				points defining the arc and sets n_pts appropriately.
-        				Only used if n_pts == 'auto'.
+        				Only used if n_pts is None.
         				<float>
         				(default: constants.seg_length == 1.0)
 
@@ -1125,7 +1306,7 @@ def path(layout, layer, points, wg_width=wg_width, bend_radius=bend_radius, n_pt
     '''
     # Compute number of points to keep the distance bewteen points on the
     # circle to seg_length
-    if n_pts == 'auto':
+    if n_pts is None:
         n_pts = 2 * ma.pi * bend_radius / seg_length
 
     # If elements of 'points' aren't DPoints, try to convert them.
@@ -1181,8 +1362,6 @@ def path_ports(path):
 
     return [[port0_loc, port0_angle], [port1_loc, port1_angle]]
 
-def round_path_ports(path_pcell):
-    pass #TODO
 
 def within_angle(actual, nominal, tolerance):
     '''
@@ -1191,7 +1370,6 @@ def within_angle(actual, nominal, tolerance):
     '''
     if actual < 0:
         actual += 360
-    print(actual)
     lower_bound = (nominal - tolerance) % 360
     if lower_bound < 0:
         lower_bound += 360
