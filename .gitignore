@@ -60,3 +60,5 @@ target/
 # Constants only relevant to a local workspace can be put in a file named
 # 'my_constants.py' that won't be tracked by git.
 my_constants.py
+
+paths_spiral_asymm_fix_attempt1\.py
