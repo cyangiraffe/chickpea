@@ -60,7 +60,7 @@ sep = 0.2   # default separation between directional coupler waveguides
 
 def dir_coupler(layout, layer, cell, coupling_length, arm_lengths=16, 
     arm_heights=8, sep=sep, wg_width=wg_width, seg_length=seg_length, 
-    n_pts='auto', origin='port0'):
+    n_pts=None, origin='port0'):
     '''
     Generates layout of a directional coupler like the one shown below. 
     Inserts the coupler into the passed cell and layer. The center of the 
@@ -142,7 +142,7 @@ def dir_coupler(layout, layer, cell, coupling_length, arm_lengths=16,
 
         seg_length:     When rounding corners, gives the distance between the
                         points defining the arc and sets n_pts appropriately.
-                        Only used if n_pts == 'auto'.
+                        Only used if n_pts is None.
                         <float>
                         (default: constants.SEG_LEGNTH == 1.0)
 
@@ -200,7 +200,7 @@ def dir_coupler(layout, layer, cell, coupling_length, arm_lengths=16,
 
 
 def dir_coupler_paths(layout, layer, coupling_length, sep=sep, arm_lengths=16,
-    arm_heights=8, wg_width=wg_width, seg_length=seg_length, n_pts='auto', 
+    arm_heights=8, wg_width=wg_width, seg_length=seg_length, n_pts=None, 
     origin='port0'):
     '''
     Generates layout of a directional coupler like the one shown below. 
@@ -258,7 +258,7 @@ def dir_coupler_paths(layout, layer, coupling_length, sep=sep, arm_lengths=16,
 
         seg_length:     When rounding corners, gives the distance between the
                         points defining the arc and sets n_pts appropriately.
-                        Only used if n_pts == 'auto'.
+                        Only used if n_pts is None.
                         <float>
                         (default: constants.seg_length == 1.0)
 
