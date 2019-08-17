@@ -60,7 +60,7 @@ sep = 0.2   # default separation between directional coupler waveguides
 
 def dir_coupler(layout, layer, cell, coupling_length, arm_lengths=16, 
     arm_heights=8, sep=sep, wg_width=wg_width, seg_length=seg_length, 
-    n_pts=None, origin='port0'):
+    n_pts=None, origin='port0', sbend_output='pcell'):
     '''
     Generates layout of a directional coupler like the one shown below. 
     Inserts the coupler into the passed cell and layer. The center of the 
@@ -153,12 +153,30 @@ def dir_coupler(layout, layer, cell, coupling_length, arm_lengths=16,
                         -----------------------------------------------------
                         'port0'     Lower left port
                         'center'    Center relative to max device dimensions
+
+        sbend_output:   If 'pcell' is passed, s-bends generated as PCells. 
+                        If 'path' is passed, s-bends generated as DPaths.
+                        <str>
+                        (default: 'pcell')
     '''
-    # Generate the paths for the directional coupler
-    input1, straight1, output1, input2, straight2, output2 = dir_coupler_paths(
-        layout, layer, coupling_length, arm_lengths=arm_lengths, arm_heights=arm_heights, 
-        sep=sep, wg_width=wg_width,
-        seg_length=seg_length, n_pts=n_pts, origin=origin)
+    if sbend_output == 'pcell':
+        # Generate the DPaths defining the directional coupler.
+        input1, straight1, output1, input2, straight2, output2 = \
+            dir_coupler_pcell(
+            layout, layer, coupling_length, arm_lengths=arm_lengths, 
+            arm_heights=arm_heights, sep=sep, wg_width=wg_width,
+            seg_length=seg_length, n_pts=n_pts, origin=origin)
+    elif sbend_output == 'path':
+        # Generate the PCells and DPaths defining the directional coupler.
+        input1, straight1, output1, input2, straight2, output2 = \
+            dir_coupler_path(
+            layout, layer, coupling_length, sep=sep, arm_lengths=arm_lengths,
+            arm_heights=arm_heights, wg_width=wg_width, seg_length=seg_length,
+            n_pts=n_pts, origin=origin)
+    else:
+        raise ValueError("Expected one of the strings 'pcell' or 'path' to "
+            + "be passed to the argument 'sbend_output'."
+            + "instead got '{}'.".format(sbend_output))
 
     if cell == 'divide':    # Divide coupler into 6 cells
         # Segregate each path to its own cell to facilitate parameter sweeps.
@@ -169,12 +187,21 @@ def dir_coupler(layout, layer, cell, coupling_length, arm_lengths=16,
         cell_straight1 = layout.create_cell('straight1')
         cell_straight2 = layout.create_cell('straight2')
 
-        cell_input1.insert(input1)
-        cell_input2.insert(input2)
-        cell_output1.insert(output1)
-        cell_output2.insert(output2)
-        cell_straight1.insert(straight1)
-        cell_straight2.insert(straight2)
+
+        if sbend_output == 'pcell':
+            cell_input1.insert(input1)
+            cell_input2.insert(input2)
+            cell_output1.insert(output1)
+            cell_output2.insert(output2)
+            cell_straight1.insert(straight1)
+            cell_straight2.insert(straight2)
+        elif sbend_output == 'path':
+            cell_input1.shapes(layer).insert(input1)
+            cell_input2.shapes(layer).insert(input2)
+            cell_output1.shapes(layer).insert(output1)
+            cell_output2.shapes(layer).insert(output2)
+            cell_straight1.shapes(layer).insert(straight1)
+            cell_straight2.shapes(layer).insert(straight2)
 
         top = layout.cell(0)            # get top-level cell in the heirarchy
 
@@ -189,17 +216,184 @@ def dir_coupler(layout, layer, cell, coupling_length, arm_lengths=16,
     else:   # Insert the coupler into the passed cell
         # Insert the paths into the passed cell so that the user can customize
         # the coupler's placement in their layout by transforming the cell.
-        cell.insert(input1)
-        cell.insert(input2)
-        cell.insert(output1)
-        cell.insert(output2)
-        cell.insert(straight1)
-        cell.insert(straight2)
+        if sbend_output == 'pcell':
+            cell.insert(input1)
+            cell.insert(input2)
+            cell.insert(output1)
+            cell.insert(output2)
+            cell.insert(straight1)
+            cell.insert(straight2)
+        elif sbend_output == 'path':
+            cell.shapes(layer).insert(input1)
+            cell.shapes(layer).insert(input2)
+            cell.shapes(layer).insert(output1)
+            cell.shapes(layer).insert(output2)
+            cell.shapes(layer).insert(straight1)
+            cell.shapes(layer).insert(straight2)
 
     return
 
+def dir_coupler_path(layout, layer, coupling_length, sep=sep, arm_lengths=16,
+    arm_heights=8, wg_width=wg_width, seg_length=seg_length, n_pts='auto', 
+    origin='port0'):
+    '''
+    Generates layout of a directional coupler like the one shown below. 
+    Inserts the coupler into the passed cell and layer. The center of the 
+    lower left waveguide port is at the origin. In the diagram below, 
+    the origin would be around the X's.
+    
 
-def dir_coupler_paths(layout, layer, coupling_length, sep=sep, arm_lengths=16,
+    Args:
+        layout:         Layout object for instantiation
+                        <pya.Layout object>
+
+        height:         Distance between ports in direction perpendicular to
+                        port direction
+                        <float>
+
+        coupling_length: Length of the straight waveguides 
+                         separatedby the distance 'sep'.
+                         <float>
+
+        sep:            Distance between edges of waveguides in the straight 
+                        section of the coupler. I.e., min oxide thickness
+                        between the waveguides.
+                        <float>
+                        (default: 0.2)
+
+        arm_length:     Length of the straight section of the S-bend arms
+                        leading into the coupling section of the coupler.
+
+                        If a scalar, every arm will have the same length.
+
+                        If a list, its entries will correspond to the arms
+                        in the following positions:
+                            [lower left, upper left, lower right, upper right]
+
+                        If a dict, the keys should be 'lower left', 
+                        'upper left', 'lower right', or 'upper right'.
+
+                        <float or list(float) or dict(str: float)> 
+                        (default: 0)
+
+        wg_width:       Width of the path
+                        <float>
+                        (default: constants.wg_width == 0.5)
+
+        n_pts:          Number of points per full circle to use when rounding
+                        corners. If 'auto', this is computed based on the
+                        value of 'seg_length'.
+                        <int or 'auto'>
+                        (default: 'auto')
+
+        seg_length:     When rounding corners, gives the distance between the
+                        points defining the arc and sets n_pts appropriately.
+                        Only used if n_pts == 'auto'.
+                        <float>
+                        (default: constants.SEG_LEGNTH == 1.0)
+
+        origin:         Indicates the location of the origin relative to 
+                        the directional coupler. Can be 'port0' or 'center'.
+
+                        value       origin location
+                        -----------------------------------------------------
+                        'port0'     Lower left port
+                        'center'    Center relative to max device dimensions
+    
+    Return:
+        input1:     Lower-left s-bend
+
+        straight1:  Lower straight segment for coupling
+
+        output1:    Lower-right s-bend
+
+        input2:     Upper-left s-bend
+
+        straight2:  Upper straight segment for coupling
+
+        output2:    Upper-right s-bend
+
+    '''
+    #
+    # Set up the s-bends leading into/out of the straight coupling portion
+    #
+
+    # If arm_lengths or arm_heights is not passed as a list, convert it
+
+    arm_lengths = parse_arm_length(arm_lengths)
+    arm_heights = parse_arm_length(arm_heights)
+
+    for arm in arm_lengths:
+        print(arm)
+
+    # Generate each s-bend with the requested length
+    input1 = paths.s_bend(layout, layer, output='path',
+        length=arm_lengths[0], height=arm_heights[0], 
+        wg_width=wg_width, seg_length=seg_length, n_pts=n_pts)
+    input2 = paths.s_bend(layout, layer, output='path',
+        length=arm_lengths[1], height=arm_heights[1], 
+        wg_width=wg_width, seg_length=seg_length, n_pts=n_pts)
+    output1 = paths.s_bend(layout, layer, output='path',
+        length=arm_lengths[2], height=arm_heights[2], 
+        wg_width=wg_width, seg_length=seg_length, n_pts=n_pts)
+    output2 = paths.s_bend(layout, layer, output='path',
+        length=arm_lengths[3], height=arm_heights[3], 
+        wg_width=wg_width, seg_length=seg_length, n_pts=n_pts)
+
+
+    # Now we'll need some transformations for getting the s-bends output by
+    # 's_bend_steep' into the right positions for the coupler.
+
+    flipy_shiftx = pya.DTrans(  # lower left arm -> lower right arm
+        pya.DTrans.M90,                # mirror across y
+        arm_lengths[0] + arm_lengths[2] + coupling_length,  # shift right 
+        arm_heights[0] - arm_heights[2])           # adjust for height diff b/w lower arms
+
+    flipx_shifty = pya.DTrans(  # lower left arm -> upper left arm
+        pya.DTrans.M0,                  # mirror across x
+        arm_lengths[0] - arm_lengths[1],            # adjust for length diff b/w left arms
+        arm_heights[0] + arm_heights[1] + sep + wg_width)    # move up
+
+    shift_diag = pya.DTrans(pya.DPoint(  # lower left arm -> upper right arm
+        arm_lengths[0] + coupling_length,                          # shift right
+        arm_heights[0] + sep + wg_width))                 # shift up
+
+    input2  = input2.transformed(flipx_shifty)
+    output1 = output1.transformed(flipy_shiftx)
+    output2 = output2.transformed(shift_diag)
+
+
+    #
+    # Generate the straight segments for coupling
+    #
+
+    bottom_points = [
+        pya.DPoint(arm_lengths[0],                   arm_heights[0]),
+        pya.DPoint(arm_lengths[0] + coupling_length, arm_heights[0])
+    ]
+
+    straight1 = pya.DPath(bottom_points, wg_width)
+
+    sep_waveguides = pya.DTrans(pya.DPoint(0, sep + wg_width))
+    straight2 = straight1.transformed(sep_waveguides)
+
+    # If the origin is at the center, transform paths appropriately
+    if origin == 'center':
+        cx, cy = dir_coupler_center(
+            coupling_length, arm_lengths, arm_heights, sep, wg_width=wg_width)
+        origin_to_center = pya.DTrans(pya.DPoint(-cx, -cy))
+
+        straight1  = straight1.transformed(origin_to_center)
+        straight2  = straight2.transformed(origin_to_center)
+        input1     = input1.transformed(origin_to_center)
+        input2     = input2.transformed(origin_to_center)
+        output1    = output1.transformed(origin_to_center)
+        output2    = output2.transformed(origin_to_center)
+
+    return input1, straight1, output1, input2, straight2, output2
+
+
+def dir_coupler_pcell(layout, layer, coupling_length, sep=sep, arm_lengths=16,
     arm_heights=8, wg_width=wg_width, seg_length=seg_length, n_pts=None, 
     origin='port0'):
     '''

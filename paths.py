@@ -1,7 +1,7 @@
 # This file contains functions for generating various photonic waveguide paths
 # in KLayout. The top-level functions are as follows:
 #
-#   path                            - wrapper around round path pcell.
+#   round_path                      - wrapper around round path pcell.
 #   delay_spiral                    - generates a delay spiral with constant
 #                                     waveguide separation.
 #   parabolic_taper                 - generates a taper with a parabolic profile
@@ -67,7 +67,8 @@ def delay_spiral(layout, layer, cell, arc_length, min_spacing,
     wg_width=wg_width, n_pts=None, seg_length=seg_length, 
     origin='center', trans=null_trans,
     verbose=False, garrulous=False,
-    max_turns=50, max_iterations=100):
+    max_turns=50, max_iterations=100,
+    sbend_output='pcell'):
     '''
     Populates 'cell' with a delay spiral composed of two intertwined extended
     arithmetic/Archimedean spirals joined by an s-bend in the center. 
@@ -394,6 +395,11 @@ def delay_spiral(layout, layer, cell, arc_length, min_spacing,
                         <int>
                         (default: 100)
 
+        sbend_output:   If 'pcell' is passed, s-bends generated as PCells. 
+                        If 'path' is passed, s-bends generated as DPaths.
+                        <str>
+                        (default: 'pcell')
+
     Return:
         actual_alength: The arc length of the generated spiral
                         <float>
@@ -435,7 +441,7 @@ def delay_spiral(layout, layer, cell, arc_length, min_spacing,
         rev_end_angle=rev_port_locs[port1_side],
         radial_shift=radial_shift, xy_ext_arr=xy_ext_arr,
         wg_width=wg_width, n_pts=n_pts, seg_length=seg_length, 
-        origin=origin, trans=trans)
+        origin=origin, trans=trans, sbend_output=sbend_output)
 
     # Return the actual pathlength of the generated spiral so the user can
     # check it and use the actual length in calculations.
@@ -897,7 +903,7 @@ def delay_spiral_geo(layout, layer, cell, turns, spacing, vertical=0,
     vertical_mode='symmetric', start_turn=1, start_angle=0, fwd_end_angle=0, 
     rev_end_angle=0, radial_shift=0, xy_ext_arr=None,
     wg_width=wg_width, n_pts=None, seg_length=seg_length, 
-    origin='center', trans=null_trans):
+    origin='center', trans=null_trans, sbend_output='pcell'):
     '''
     Populates 'cell' with a delay spiral composed of two intertwined extended
     arithmetic/Archimedean spirals joined by an s-bend in the center. 
@@ -1165,6 +1171,11 @@ def delay_spiral_geo(layout, layer, cell, turns, spacing, vertical=0,
                         rounded path PCell that comprises the s-bend.
                         <pya.DTrans object>
                         (default: transforms.null_trans)
+
+        sbend_output:   If 'pcell' is passed, s-bends generated as PCells. 
+                        If 'path' is passed, s-bends generated as DPaths.
+                        <str>
+                        (default: 'pcell')
     '''
     # Generate coordinates for a basic spiral curve
     fwd_coords = arithmetic_spiral_curve(
@@ -1266,11 +1277,6 @@ def delay_spiral_geo(layout, layer, cell, turns, spacing, vertical=0,
         raise Warning(
             "Values of 'origin' other than 'center' not yet supported.")
 
-    # Generate the s-bend with the determined dimensions and orientation
-    s_bend_trans = trans * place_s_bend * orient_s_bend
-    s_bend_pcell = s_bend(layout, layer, s_bend_length, s_bend_height,
-        wg_width=wg_width, origin='port0', trans=s_bend_trans)
-
     # Generate the spiral arms as DPaths
     fwd_spiral_path = pya.DPath(fwd_spiral_Dpoints, wg_width).transformed(trans)
     rev_spiral_path = pya.DPath(rev_spiral_Dpoints, wg_width).transformed(trans)
@@ -1278,7 +1284,16 @@ def delay_spiral_geo(layout, layer, cell, turns, spacing, vertical=0,
     # Insert it all into the passed cell
     cell.shapes(layer).insert(fwd_spiral_path)
     cell.shapes(layer).insert(rev_spiral_path)
-    cell.insert(s_bend_pcell)
+
+
+    # Generate the s-bend with the determined dimensions and orientation
+    s_bend_trans = trans * place_s_bend * orient_s_bend
+    s_bend_obj = s_bend(layout, layer, s_bend_length, s_bend_height,
+        wg_width=wg_width, origin='port0', trans=s_bend_trans,
+        output=sbend_output)
+
+    if sbend_output == 'pcell': cell.insert(s_bend_obj)
+    elif sbend_output == 'path': cell.shapes(layer).insert(s_bend_obj)
 
     return
 
@@ -2331,7 +2346,7 @@ def linear_taper(layout, start_width, end_width, length, origin='port0'):
 
 def s_bend(layout, layer, length=None, height=None, bend_radius=None, 
     bend_angle=None, wg_width=wg_width, n_pts=None, seg_length=seg_length,
-    origin='port0', trans=null_trans):
+    origin='port0', trans=null_trans, output='pcell'):
     '''
     Generates a path in the shape of an s-bend. Origin at the lower left port.
         
@@ -2411,6 +2426,14 @@ def s_bend(layout, layer, length=None, height=None, bend_radius=None,
                         <pya.DTrans object>
                         (default: transforms.null_trans)
 
+        output:         Determines what KLayout object is the output of
+                        this function. 
+
+                        passed string       function output
+                        -----------------------------------------------
+                        'pcell'             Rounded Path PCell
+                        'path'              pya.DPath object w/ round corners
+
     Return:
         The instantiated rounded path PCell.
         <pya.DCellInstArray object>
@@ -2447,16 +2470,16 @@ def s_bend(layout, layer, length=None, height=None, bend_radius=None,
         # This will approximate bend angles less that 1e-4 degrees as 0.
         return s_bend_double(layout, layer, wg_width=wg_width,
             bend_radius=bend_radius, n_pts=n_pts, seg_length=seg_length,
-            trans=trans)
+            trans=trans, output=output)
 
     if steep_bend:
         return s_bend_steep(layout, layer, height - 2 * bend_radius, 
             wg_width=wg_width, bend_radius=bend_radius, n_pts=n_pts, 
-            seg_length=seg_length, trans=trans)
+            seg_length=seg_length, trans=trans, output=output)
     else:
         return s_bend_shallow(layout, layer, length, bend_radius, 
             height, bend_angle, wg_width=wg_width, n_pts=n_pts, 
-            seg_length=seg_length, trans=trans)
+            seg_length=seg_length, trans=trans, output=output)
 
 
 def s_bend_solve_params(length, bend_radius, height, bend_angle):
@@ -2769,7 +2792,8 @@ def s_bend_solve_length_angle(height, bend_radius):
 
 
 def s_bend_shallow(layout, layer, length, bend_radius, height, bend_angle, 
-    wg_width=wg_width, n_pts=None, seg_length=seg_length, trans=null_trans):
+    wg_width=wg_width, n_pts=None, seg_length=seg_length, trans=null_trans,
+    output='pcell'):
     '''
     Generates a shallow s-bend.
 
@@ -2800,6 +2824,14 @@ def s_bend_shallow(layout, layer, length, bend_radius, height, bend_angle,
                         <pya.DTrans object>
                         (default: transforms.null_trans)
 
+        output:         Determines what KLayout object is the output of
+                        this function. 
+
+                        passed string       function output
+                        -----------------------------------------------
+                        'pcell'             Rounded Path PCell
+                        'path'              pya.DPath object w/ round corners
+
     Return:
         The instantiated rounded path PCell.
         <pya.DCellInstArray object>
@@ -2815,14 +2847,14 @@ def s_bend_shallow(layout, layer, length, bend_radius, height, bend_angle,
         pya.DPoint(length,  height)
     ]
 
-    return path(layout, layer, points, wg_width=wg_width, 
+    return round_path(layout, layer, points, wg_width=wg_width, 
         bend_radius=bend_radius,n_pts=n_pts, seg_length=seg_length, 
-        trans=trans)
+        trans=trans, output=output)
 
 
 def s_bend_steep(layout, layer, length, wg_width=wg_width,  
     bend_radius=bend_radius, n_pts=None, seg_length=seg_length, 
-    trans=null_trans):
+    trans=null_trans, output='pcell'):
     '''
     Generates a path in the shape of an s-bend with 90 degree bends. A helper
     function for 's_bend' that handles the case height > length.
@@ -2864,6 +2896,14 @@ def s_bend_steep(layout, layer, length, wg_width=wg_width,
                         <pya.DTrans object>
                         (default: transforms.null_trans)
 
+        output:         Determines what KLayout object is the output of
+                        this function. 
+
+                        passed string       function output
+                        -----------------------------------------------
+                        'pcell'             Rounded Path PCell
+                        'path'              pya.DPath object w/ round corners
+
     Return:
         The instantiated rounded path PCell.
         <pya.DCellInstArray object>
@@ -2875,13 +2915,13 @@ def s_bend_steep(layout, layer, length, wg_width=wg_width,
         pya.DPoint(2 * bend_radius, length + 2 * bend_radius)
     ]
 
-    return path(layout, layer, points, wg_width=wg_width, 
+    return round_path(layout, layer, points, wg_width=wg_width, 
         bend_radius=bend_radius, n_pts=n_pts, seg_length=seg_length, 
-        trans=trans)
+        trans=trans, output=output)
 
 
 def s_bend_double(layout, layer, wg_width=wg_width, bend_radius=bend_radius, 
-    n_pts=None, seg_length=seg_length, trans=null_trans):
+    n_pts=None, seg_length=seg_length, trans=null_trans, output='pcell'):
     '''
     Generates a path in the shape of an s-bend that doubles back on itself
     such that the horizontal distance between its ports is exactly zero.
@@ -2919,6 +2959,14 @@ def s_bend_double(layout, layer, wg_width=wg_width, bend_radius=bend_radius,
                         <pya.DTrans object>
                         (default: transforms.null_trans)
 
+        output:         Determines what KLayout object is the output of
+                        this function. 
+
+                        passed string       function output
+                        -----------------------------------------------
+                        'pcell'             Rounded Path PCell
+                        'path'              pya.DPath object w/ round corners
+
     Return:
         The instantiated rounded path PCell.
         <pya.DCellInstArray object>
@@ -2932,13 +2980,13 @@ def s_bend_double(layout, layer, wg_width=wg_width, bend_radius=bend_radius,
         pya.DPoint( 0,               4 * bend_radius)
     ]
 
-    return path(layout, layer, points, wg_width=wg_width, 
+    return round_path(layout, layer, points, wg_width=wg_width, 
         bend_radius=bend_radius, n_pts=n_pts, seg_length=seg_length, 
-        trans=trans)
+        trans=trans, output=output)
 
 
-def path(layout, layer, points, wg_width=wg_width, bend_radius=bend_radius, 
-    n_pts=None, seg_length=seg_length, trans=null_trans):
+def round_path(layout, layer, points, wg_width=wg_width, bend_radius=bend_radius, 
+    n_pts=None, seg_length=seg_length, trans=null_trans, output='pcell'):
     '''
     Generates a rounded path PCell from the passed path.
 
@@ -2976,9 +3024,18 @@ def path(layout, layer, points, wg_width=wg_width, bend_radius=bend_radius,
                         (default: constants.seg_length == 1.0)
 
         trans:          A transformation to apply upon instantiation of the
-                        rounded path PCell.
+                        rounded path PCell (if output == 'pcell'), or to the
+                        DPath (if output == 'path').
                         <pya.DTrans object>
                         (default: transforms.null_trans)
+
+        output:         Determines what KLayout object is the output of
+                        this function. 
+
+                        passed string       function output
+                        -----------------------------------------------
+                        'pcell'             Rounded Path PCell
+                        'path'              pya.DPath object w/ round corners
 
     Return:
         The instantiated rounded path PCell.
@@ -2997,22 +3054,32 @@ def path(layout, layer, points, wg_width=wg_width, bend_radius=bend_radius,
 
     path = pya.DPath(points, wg_width)
 
-    basic_lib = pya.Library.library_by_name("Basic")
-    pcell_dec = basic_lib.layout().pcell_declaration("ROUND_PATH")
-    layer_name = layout.layer_infos()[layer]
+    if output == 'pcell':
+        basic_lib = pya.Library.library_by_name("Basic")
+        pcell_dec = basic_lib.layout().pcell_declaration("ROUND_PATH")
+        layer_name = layout.layer_infos()[layer]
 
-    parameters = {
-        "layer":   layer_name, 
-        "radius":  bend_radius, 
-        "path":    path, 
-        "npoints": n_pts
-    }
+        parameters = {
+            "layer":   layer_name, 
+            "radius":  bend_radius, 
+            "path":    path, 
+            "npoints": n_pts
+        }
 
-    pcell_idx = layout.add_pcell_variant(basic_lib, pcell_dec.id(), parameters)
+        pcell_idx = layout.add_pcell_variant(basic_lib, pcell_dec.id(), parameters)
 
-    pcell = pya.DCellInstArray(pcell_idx, trans)
+        pcell = pya.DCellInstArray(pcell_idx, trans)
 
-    return pcell
+        return pcell
+
+    elif output == 'path':
+        return path.round_corners(
+            bend_radius, n_pts, layout.dbu).transformed(trans)
+
+    else:
+        raise ValueError(
+            "Expected one of the strings 'pcell' or 'path' to be passed to "
+            + "the argument 'output'. Instead got {}.".format(output))
 
 
 def array_to_DPoints(arr):
