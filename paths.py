@@ -160,26 +160,52 @@ def delay_spiral(layout, layer, cell, arc_length, min_spacing,
                         (default: 0)
 
         vertical:       Length of vertical straight segments to be inserted.
-                        If list, the nth entry specifies the  length of
-                        the segment inserted in the nth turn of the spiral. 
-                        This means that each entry in the array will hold the
-                        length of two inserted segments on either side of the
-                        spiral.
+                        This is done by shifting the segments of the spiral
+                        outwards from their original positions and letting
+                        them be implicitly stitched together when the coords
+                        are used to generate a path.
+                        If list, the nth entry specifies by how much the nth
+                        half of the spiral (imagining the spiral divided along
+                        the y axis) is shifted. The segments corresponding to
+                        the 0th entry are those in the first FULL half and the
+                        segment before the first full half, if there exists
+                        one. E.g., if the spiral's innermost segment is in 
+                        quadrant 1, and the spiral unwinds in the counter-
+                        clockwise direction, then the first three segments
+                        will be shifted as specified by the 0th entry in 
+                        'vertical' (i.e., the segments in quadrants 1, 2, 3),
+                        but if the spiral started in quadrant 2, only the
+                        firt two segments (in quadrants 2, 3) would be shifted
+                        by the 0th entry, as usual.
                         If more values are supplied than turns, the extra
                         value are ignored. If fewer values are supplied than
                         turns, the function will raise an exception.
                         <float or int or list>
+                        (default: 0)
 
         horizontal:     Length of horizontal straight segments to be inserted.
-                        If list, the nth entry specifies the  length of
-                        the segment inserted in the nth turn of the spiral. 
-                        This means that each entry in the array will hold the
-                        length of two inserted segments on either side of the
-                        spiral.
+                        This is done by shifting the segments of the spiral
+                        outwards from their original positions and letting
+                        them be implicitly stitched together when the coords
+                        are used to generate a path.
+                        If list, the nth entry specifies by how much the nth
+                        half of the spiral (imagining the spiral divided along
+                        the y axis) is shifted. The segments corresponding to
+                        the 0th entry are those in the first FULL half and the
+                        segment before the first full half, if there exists
+                        one. E.g., if the spiral's innermost segment is in 
+                        quadrant 0, and the spiral unwinds in the counter-
+                        clockwise direction, then the first three segments
+                        will be shifted as specified by the 0th entry in 
+                        'horizontal' (i.e., the segments in quadrants 0, 1, 2),
+                        but if the spiral started in quadrant 1, only the
+                        firt two segments (in quadrants 1, 2) would be shifted
+                        by the 0th entry, as usual.
                         If more values are supplied than turns, the list will
                         simply be truncated. If fewer values are supplied than
                         turns, the function will raise an exception.
                         <float or int or list>
+                        (default: 0)
 
         quad_shift:     When vertical or horizontal is supplied as a list,
                         'quad_shift' changes the interface between quadrants
@@ -273,7 +299,7 @@ def delay_spiral(layout, layer, cell, arc_length, min_spacing,
                             by half the value passed in 'horizontal', so that
                             the total length of the extensions is the value 
                             of 'horizontal'. NOTE: if an array of non-
-                            identical values is passed in 'horiztonal', then
+                            identical values is passed in 'horizontal', then
                             at the straight extension on the interface across
                             which we proceed to the next element of the array,
                             the two spiral segments will be shifted by
@@ -282,7 +308,7 @@ def delay_spiral(layout, layer, cell, arc_length, min_spacing,
                             former by the (i - 1)th element, and thus the
                             straight segment at such an interface will not
                             have a length of horizontal[i], but of
-                            (horiztonal[i] + horizontal[i - 1]) / 2.
+                            (horizontal[i] + horizontal[i - 1]) / 2.
 
         xy_ext_arr: In the event that the parameters above do not 
                         provide enough generality for the sorts of lateral 
@@ -291,7 +317,7 @@ def delay_spiral(layout, layer, cell, arc_length, min_spacing,
                         'shift' arg of the function 
                         'arithmetic_spiral_extension'. If shift is None, then 
                         it is constructed from the other arguments. For 
-                        example, when both vertical and horiztonal extension 
+                        example, when both vertical and horizontal extension 
                         modes are 'symmetric', the 'shift' array generated
                         looks like this:
                             shift = np.array([
@@ -408,7 +434,8 @@ def delay_spiral(layout, layer, cell, arc_length, min_spacing,
         fwd_end_angle=fwd_port_locs[port0_side], 
         rev_end_angle=rev_port_locs[port1_side],
         radial_shift=radial_shift, xy_ext_arr=xy_ext_arr,
-        wg_width=wg_width, n_pts=n_pts, origin=origin, trans=trans)
+        wg_width=wg_width, n_pts=n_pts, seg_length=seg_length, 
+        origin=origin, trans=trans)
 
     # Return the actual pathlength of the generated spiral so the user can
     # check it and use the actual length in calculations.
@@ -506,26 +533,52 @@ def delay_spiral_alen_tuning(arc_length, min_spacing,
                         (default: 0)
 
         vertical:       Length of vertical straight segments to be inserted.
-                        If list, the nth entry specifies the  length of
-                        the segment inserted in the nth turn of the spiral. 
-                        This means that each entry in the array will hold the
-                        length of two inserted segments on either side of the
-                        spiral.
+                        This is done by shifting the segments of the spiral
+                        outwards from their original positions and letting
+                        them be implicitly stitched together when the coords
+                        are used to generate a path.
+                        If list, the nth entry specifies by how much the nth
+                        half of the spiral (imagining the spiral divided along
+                        the y axis) is shifted. The segments corresponding to
+                        the 0th entry are those in the first FULL half and the
+                        segment before the first full half, if there exists
+                        one. E.g., if the spiral's innermost segment is in 
+                        quadrant 1, and the spiral unwinds in the counter-
+                        clockwise direction, then the first three segments
+                        will be shifted as specified by the 0th entry in 
+                        'vertical' (i.e., the segments in quadrants 1, 2, 3),
+                        but if the spiral started in quadrant 2, only the
+                        firt two segments (in quadrants 2, 3) would be shifted
+                        by the 0th entry, as usual.
                         If more values are supplied than turns, the extra
                         value are ignored. If fewer values are supplied than
                         turns, the function will raise an exception.
                         <float or int or list>
+                        (default: 0)
 
         horizontal:     Length of horizontal straight segments to be inserted.
-                        If list, the nth entry specifies the  length of
-                        the segment inserted in the nth turn of the spiral. 
-                        This means that each entry in the array will hold the
-                        length of two inserted segments on either side of the
-                        spiral.
+                        This is done by shifting the segments of the spiral
+                        outwards from their original positions and letting
+                        them be implicitly stitched together when the coords
+                        are used to generate a path.
+                        If list, the nth entry specifies by how much the nth
+                        half of the spiral (imagining the spiral divided along
+                        the y axis) is shifted. The segments corresponding to
+                        the 0th entry are those in the first FULL half and the
+                        segment before the first full half, if there exists
+                        one. E.g., if the spiral's innermost segment is in 
+                        quadrant 0, and the spiral unwinds in the counter-
+                        clockwise direction, then the first three segments
+                        will be shifted as specified by the 0th entry in 
+                        'horizontal' (i.e., the segments in quadrants 0, 1, 2),
+                        but if the spiral started in quadrant 1, only the
+                        firt two segments (in quadrants 1, 2) would be shifted
+                        by the 0th entry, as usual.
                         If more values are supplied than turns, the list will
                         simply be truncated. If fewer values are supplied than
                         turns, the function will raise an exception.
                         <float or int or list>
+                        (default: 0)
 
         quad_shift:     When vertical or horizontal is supplied as a list,
                         'quad_shift' changes the interface between quadrants
@@ -619,7 +672,7 @@ def delay_spiral_alen_tuning(arc_length, min_spacing,
                             by half the value passed in 'horizontal', so that
                             the total length of the extensions is the value 
                             of 'horizontal'. NOTE: if an array of non-
-                            identical values is passed in 'horiztonal', then
+                            identical values is passed in 'horizontal', then
                             at the straight extension on the interface across
                             which we proceed to the next element of the array,
                             the two spiral segments will be shifted by
@@ -628,7 +681,7 @@ def delay_spiral_alen_tuning(arc_length, min_spacing,
                             former by the (i - 1)th element, and thus the
                             straight segment at such an interface will not
                             have a length of horizontal[i], but of
-                            (horiztonal[i] + horizontal[i - 1]) / 2.
+                            (horizontal[i] + horizontal[i - 1]) / 2.
 
         xy_ext_arr:     In the event that the parameters above do not 
                         provide enough generality for the sorts of lateral 
@@ -637,7 +690,7 @@ def delay_spiral_alen_tuning(arc_length, min_spacing,
                         'shift' arg of the function 
                         'arithmetic_spiral_extension'. If shift is None, then 
                         it is constructed from the other arguments. For 
-                        example, when both vertical and horiztonal extension 
+                        example, when both vertical and horizontal extension 
                         modes are 'symmetric', the 'shift' array generated
                         looks like this:
                             shift = np.array([
@@ -740,13 +793,13 @@ def delay_spiral_alen_tuning(arc_length, min_spacing,
         fwd_end_angle=fwd_port_locs[port0_side], 
         rev_end_angle=rev_port_locs[port1_side],
         radial_shift=radial_shift, xy_ext_arr=xy_ext_arr,
-        wg_width=wg_width, n_pts=n_pts)
+        wg_width=wg_width, n_pts=n_pts, seg_length=seg_length, 
+        verbose=garrulous)
 
     upper_bound = arc_length + alen_tolerance
 
     al_err = arc_length - tuned_length # arc length error
     if al_err < 0:
-        # TODO: Elaborate on error message
         raise RuntimeError(
               "A spiral with just one turn yeilded an arc length of "
             + "{}, which already is greater than the ".format(tuned_length)
@@ -772,7 +825,8 @@ def delay_spiral_alen_tuning(arc_length, min_spacing,
             fwd_end_angle=fwd_port_locs[port0_side], 
             rev_end_angle=rev_port_locs[port1_side],
             radial_shift=radial_shift, xy_ext_arr=xy_ext_arr,
-            wg_width=wg_width, n_pts=n_pts, verbose=garrulous)
+            wg_width=wg_width, n_pts=n_pts, seg_length=seg_length, 
+            verbose=garrulous)
 
         # If it hasn't gone beyond the upper bound, update the actual
         # number of turns
@@ -816,7 +870,8 @@ def delay_spiral_alen_tuning(arc_length, min_spacing,
             fwd_end_angle=fwd_port_locs[port0_side], 
             rev_end_angle=rev_port_locs[port1_side],
             radial_shift=radial_shift, xy_ext_arr=xy_ext_arr,
-            wg_width=wg_width, n_pts=n_pts, verbose=garrulous)
+            wg_width=wg_width, n_pts=n_pts, seg_length=seg_length, 
+            verbose=garrulous)
 
         al_err = arc_length - tuned_length
         fine_iterations += 1
@@ -841,7 +896,8 @@ def delay_spiral_geo(layout, layer, cell, turns, spacing, vertical=0,
     horizontal=0, quad_shift=0, horizontal_mode='symmetric', 
     vertical_mode='symmetric', start_turn=1, start_angle=0, fwd_end_angle=0, 
     rev_end_angle=0, radial_shift=0, xy_ext_arr=None,
-    wg_width=wg_width, n_pts=5000, origin='center', trans=null_trans):
+    wg_width=wg_width, n_pts=None, seg_length=seg_length, 
+    origin='center', trans=null_trans):
     '''
     Populates 'cell' with a delay spiral composed of two intertwined extended
     arithmetic/Archimedean spirals joined by an s-bend in the center. 
@@ -870,26 +926,52 @@ def delay_spiral_geo(layout, layer, cell, turns, spacing, vertical=0,
                         <float or int>
 
         vertical:       Length of vertical straight segments to be inserted.
-                        If list, the nth entry specifies the  length of
-                        the segment inserted in the nth turn of the spiral. 
-                        This means that each entry in the array will hold the
-                        length of two inserted segments on either side of the
-                        spiral.
+                        This is done by shifting the segments of the spiral
+                        outwards from their original positions and letting
+                        them be implicitly stitched together when the coords
+                        are used to generate a path.
+                        If list, the nth entry specifies by how much the nth
+                        half of the spiral (imagining the spiral divided along
+                        the y axis) is shifted. The segments corresponding to
+                        the 0th entry are those in the first FULL half and the
+                        segment before the first full half, if there exists
+                        one. E.g., if the spiral's innermost segment is in 
+                        quadrant 1, and the spiral unwinds in the counter-
+                        clockwise direction, then the first three segments
+                        will be shifted as specified by the 0th entry in 
+                        'vertical' (i.e., the segments in quadrants 1, 2, 3),
+                        but if the spiral started in quadrant 2, only the
+                        firt two segments (in quadrants 2, 3) would be shifted
+                        by the 0th entry, as usual.
                         If more values are supplied than turns, the extra
                         value are ignored. If fewer values are supplied than
                         turns, the function will raise an exception.
                         <float or int or list>
+                        (default: 0)
 
         horizontal:     Length of horizontal straight segments to be inserted.
-                        If list, the nth entry specifies the  length of
-                        the segment inserted in the nth turn of the spiral. 
-                        This means that each entry in the array will hold the
-                        length of two inserted segments on either side of the
-                        spiral.
+                        This is done by shifting the segments of the spiral
+                        outwards from their original positions and letting
+                        them be implicitly stitched together when the coords
+                        are used to generate a path.
+                        If list, the nth entry specifies by how much the nth
+                        half of the spiral (imagining the spiral divided along
+                        the y axis) is shifted. The segments corresponding to
+                        the 0th entry are those in the first FULL half and the
+                        segment before the first full half, if there exists
+                        one. E.g., if the spiral's innermost segment is in 
+                        quadrant 0, and the spiral unwinds in the counter-
+                        clockwise direction, then the first three segments
+                        will be shifted as specified by the 0th entry in 
+                        'horizontal' (i.e., the segments in quadrants 0, 1, 2),
+                        but if the spiral started in quadrant 1, only the
+                        firt two segments (in quadrants 1, 2) would be shifted
+                        by the 0th entry, as usual.
                         If more values are supplied than turns, the list will
                         simply be truncated. If fewer values are supplied than
                         turns, the function will raise an exception.
                         <float or int or list>
+                        (default: 0)
 
         quad_shift:     When vertical or horizontal is supplied as a list,
                         'quad_shift' changes the interface between quadrants
@@ -983,7 +1065,7 @@ def delay_spiral_geo(layout, layer, cell, turns, spacing, vertical=0,
                             by half the value passed in 'horizontal', so that
                             the total length of the extensions is the value 
                             of 'horizontal'. NOTE: if an array of non-
-                            identical values is passed in 'horiztonal', then
+                            identical values is passed in 'horizontal', then
                             at the straight extension on the interface across
                             which we proceed to the next element of the array,
                             the two spiral segments will be shifted by
@@ -992,7 +1074,7 @@ def delay_spiral_geo(layout, layer, cell, turns, spacing, vertical=0,
                             former by the (i - 1)th element, and thus the
                             straight segment at such an interface will not
                             have a length of horizontal[i], but of
-                            (horiztonal[i] + horizontal[i - 1]) / 2.
+                            (horizontal[i] + horizontal[i - 1]) / 2.
 
         xy_ext_arr:     In the event that the parameters above do not 
                         provide enough generality for the sorts of lateral 
@@ -1001,7 +1083,7 @@ def delay_spiral_geo(layout, layer, cell, turns, spacing, vertical=0,
                         'shift' arg of the function 
                         'arithmetic_spiral_extension'. If shift is None, then 
                         it is constructed from the other arguments. For 
-                        example, when both vertical and horiztonal extension 
+                        example, when both vertical and horizontal extension 
                         modes are 'symmetric', the 'shift' array generated
                         looks like this:
                             shift = np.array([
@@ -1051,9 +1133,19 @@ def delay_spiral_geo(layout, layer, cell, turns, spacing, vertical=0,
                         (default: constants.wg_width == 0.5)
 
         n_pts:          Number of points defining each of the intertwined
-                        spiral paths.
+                        spiral paths. Note that this parameter will affect 
+                        how close the port directions get to a multiple of
+                        90 degrees.
                         <int>
-                        (default: 5000)
+                        (default: None)
+
+        seg_length:     Gives the distance between the points defining the 
+                        spiral and sets n_pts appropriately. Note that this 
+                        parameter will affect how close the port directions
+                        get to a multiple of 90 degrees.
+                        Only used if n_pts is None.
+                        <float or int>
+                        (default: constants.seg_length == 1.0)
 
         origin:         Indicates the location of the origin relative to 
                         the s-bend. Can currently only be 'center'. When
@@ -1078,7 +1170,7 @@ def delay_spiral_geo(layout, layer, cell, turns, spacing, vertical=0,
     fwd_coords = arithmetic_spiral_curve(
         turns, 
         (2 * spacing) + (2 * wg_width), 
-        n_pts, 
+        n_pts, seg_length,
         start_turn=start_turn, 
         start_angle=start_angle, 
         end_angle=fwd_end_angle, 
@@ -1089,7 +1181,7 @@ def delay_spiral_geo(layout, layer, cell, turns, spacing, vertical=0,
     rev_coords = arithmetic_spiral_curve(
         turns, 
         -(2 * spacing) - (2 * wg_width), 
-        n_pts, 
+        n_pts, seg_length,
         start_turn=start_turn, 
         start_angle=start_angle, 
         end_angle=rev_end_angle, 
@@ -1195,7 +1287,7 @@ def delay_spiral_geo_alength(turns, spacing, vertical=0,
     horizontal=0, quad_shift=0, horizontal_mode='symmetric', 
     vertical_mode='symmetric', start_turn=1, start_angle=0, fwd_end_angle=0, 
     rev_end_angle=0, radial_shift=0, xy_ext_arr=None,
-    wg_width=wg_width, n_pts=5000, verbose=False):
+    wg_width=wg_width, n_pts=None, seg_length=seg_length, verbose=False):
     '''
     Returns the arc length of the spiral generated by 'delay_spiral_geo' when
     supplied with the same parameters.
@@ -1208,26 +1300,52 @@ def delay_spiral_geo_alength(turns, spacing, vertical=0,
                         <float or int>
 
         vertical:       Length of vertical straight segments to be inserted.
-                        If list, the nth entry specifies the  length of
-                        the segment inserted in the nth turn of the spiral. 
-                        This means that each entry in the array will hold the
-                        length of two inserted segments on either side of the
-                        spiral.
+                        This is done by shifting the segments of the spiral
+                        outwards from their original positions and letting
+                        them be implicitly stitched together when the coords
+                        are used to generate a path.
+                        If list, the nth entry specifies by how much the nth
+                        half of the spiral (imagining the spiral divided along
+                        the y axis) is shifted. The segments corresponding to
+                        the 0th entry are those in the first FULL half and the
+                        segment before the first full half, if there exists
+                        one. E.g., if the spiral's innermost segment is in 
+                        quadrant 1, and the spiral unwinds in the counter-
+                        clockwise direction, then the first three segments
+                        will be shifted as specified by the 0th entry in 
+                        'vertical' (i.e., the segments in quadrants 1, 2, 3),
+                        but if the spiral started in quadrant 2, only the
+                        firt two segments (in quadrants 2, 3) would be shifted
+                        by the 0th entry, as usual.
                         If more values are supplied than turns, the extra
                         value are ignored. If fewer values are supplied than
                         turns, the function will raise an exception.
                         <float or int or list>
+                        (default: 0)
 
         horizontal:     Length of horizontal straight segments to be inserted.
-                        If list, the nth entry specifies the  length of
-                        the segment inserted in the nth turn of the spiral. 
-                        This means that each entry in the array will hold the
-                        length of two inserted segments on either side of the
-                        spiral.
+                        This is done by shifting the segments of the spiral
+                        outwards from their original positions and letting
+                        them be implicitly stitched together when the coords
+                        are used to generate a path.
+                        If list, the nth entry specifies by how much the nth
+                        half of the spiral (imagining the spiral divided along
+                        the y axis) is shifted. The segments corresponding to
+                        the 0th entry are those in the first FULL half and the
+                        segment before the first full half, if there exists
+                        one. E.g., if the spiral's innermost segment is in 
+                        quadrant 0, and the spiral unwinds in the counter-
+                        clockwise direction, then the first three segments
+                        will be shifted as specified by the 0th entry in 
+                        'horizontal' (i.e., the segments in quadrants 0, 1, 2),
+                        but if the spiral started in quadrant 1, only the
+                        firt two segments (in quadrants 1, 2) would be shifted
+                        by the 0th entry, as usual.
                         If more values are supplied than turns, the list will
                         simply be truncated. If fewer values are supplied than
                         turns, the function will raise an exception.
                         <float or int or list>
+                        (default: 0)
 
         quad_shift:     When vertical or horizontal is supplied as a list,
                         'quad_shift' changes the interface between quadrants
@@ -1321,7 +1439,7 @@ def delay_spiral_geo_alength(turns, spacing, vertical=0,
                             by half the value passed in 'horizontal', so that
                             the total length of the extensions is the value 
                             of 'horizontal'. NOTE: if an array of non-
-                            identical values is passed in 'horiztonal', then
+                            identical values is passed in 'horizontal', then
                             at the straight extension on the interface across
                             which we proceed to the next element of the array,
                             the two spiral segments will be shifted by
@@ -1330,7 +1448,7 @@ def delay_spiral_geo_alength(turns, spacing, vertical=0,
                             former by the (i - 1)th element, and thus the
                             straight segment at such an interface will not
                             have a length of horizontal[i], but of
-                            (horiztonal[i] + horizontal[i - 1]) / 2.
+                            (horizontal[i] + horizontal[i - 1]) / 2.
 
         xy_ext_arr:     In the event that the parameters above do not 
                         provide enough generality for the sorts of lateral 
@@ -1339,7 +1457,7 @@ def delay_spiral_geo_alength(turns, spacing, vertical=0,
                         'shift' arg of the function 
                         'arithmetic_spiral_extension'. If shift is None, then 
                         it is constructed from the other arguments. For 
-                        example, when both vertical and horiztonal extension 
+                        example, when both vertical and horizontal extension 
                         modes are 'symmetric', the 'shift' array generated
                         looks like this:
                             shift = np.array([
@@ -1378,9 +1496,19 @@ def delay_spiral_geo_alength(turns, spacing, vertical=0,
                         (default: constants.wg_width == 0.5)
 
         n_pts:          Number of points defining each of the intertwined
-                        spiral paths.
+                        spiral paths. Note that this parameter will affect 
+                        how close the port directions get to a multiple of
+                        90 degrees.
                         <int>
-                        (default: 5000)
+                        (default: None)
+
+        seg_length:     Gives the distance between the points defining the 
+                        spiral and sets n_pts appropriately. Note that this 
+                        parameter will affect how close the port directions
+                        get to a multiple of 90 degrees.
+                        Only used if n_pts is None.
+                        <float or int>
+                        (default: constants.seg_length == 1.0)
 
         verbose:        If True, prints the arc lengths for the s-bend, 
                         spiral extension lengths, and unextended spiral arc
@@ -1398,7 +1526,7 @@ def delay_spiral_geo_alength(turns, spacing, vertical=0,
     fwd_coords = arithmetic_spiral_curve(
         turns, 
         2 * (spacing + wg_width), 
-        n_pts, 
+        n_pts, seg_length=seg_length,
         start_turn=start_turn, 
         start_angle=start_angle, 
         end_angle=fwd_end_angle, 
@@ -1409,7 +1537,7 @@ def delay_spiral_geo_alength(turns, spacing, vertical=0,
     rev_coords = arithmetic_spiral_curve(
         turns, 
         -2 * (spacing + wg_width), 
-        n_pts, 
+        n_pts, seg_length=seg_length,
         start_turn=start_turn, 
         start_angle=start_angle, 
         end_angle=rev_end_angle, 
@@ -1488,7 +1616,7 @@ def delay_spiral_geo_alength(turns, spacing, vertical=0,
             # start of the (i + 1)th segment.
             disp_vector = segs[i + 1][:, 0] - segs[i][:, -1]
 
-            # Since we expect a purely horiztonal or vertical displacement
+            # Since we expect a purely horizontal or vertical displacement
             # vector (cooresponding to extensions along x and y only), the
             # straight extension length can be computed simply as the sum
             # of the displacement in the x and y directions, since one of the
@@ -1577,28 +1705,64 @@ def arithmetic_spiral_extension(coords, vertical, horizontal, quad_shift=0,
     an arithmetic spiral defined by 'coords', thereby allowing the spiral to 
     be extended in the x and y directions independently.
 
+    NOTE: in documentation and code for this function, the quadrants for the
+    Cartesian plane are zero-indexed as follows:
+
+           y
+           |     
+       1   |   0 
+           |    
+    -------+------- x
+           |
+       2   |   3
+           |
+
     Args:
         coords:         Cartesian coordinates defining an arithmetic spiral.
                         First column x coords. Second column y coords.
                         <np.ndarray of floats with shape (2, n)>
 
         vertical:       Length of vertical straight segments to be inserted.
-                        If list, the nth entry specifies the  length of
-                        the segment inserted in the nth turn of the spiral. 
-                        This means that each entry in the array will hold the
-                        length of two inserted segments on either side of the
-                        spiral.
+                        This is done by shifting the segments of the spiral
+                        outwards from their original positions and letting
+                        them be implicitly stitched together when the coords
+                        are used to generate a path.
+                        If list, the nth entry specifies by how much the nth
+                        half of the spiral (imagining the spiral divided along
+                        the y axis) is shifted. The segments corresponding to
+                        the 0th entry are those in the first FULL half and the
+                        segment before the first full half, if there exists
+                        one. E.g., if the spiral's innermost segment is in 
+                        quadrant 1, and the spiral unwinds in the counter-
+                        clockwise direction, then the first three segments
+                        will be shifted as specified by the 0th entry in 
+                        'vertical' (i.e., the segments in quadrants 1, 2, 3),
+                        but if the spiral started in quadrant 2, only the
+                        firt two segments (in quadrants 2, 3) would be shifted
+                        by the 0th entry, as usual.
                         If more values are supplied than turns, the extra
                         value are ignored. If fewer values are supplied than
                         turns, the function will raise an exception.
                         <float or int or list>
 
         horizontal:     Length of horizontal straight segments to be inserted.
-                        If list, the nth entry specifies the  length of
-                        the segment inserted in the nth turn of the spiral. 
-                        This means that each entry in the array will hold the
-                        length of two inserted segments on either side of the
-                        spiral.
+                        This is done by shifting the segments of the spiral
+                        outwards from their original positions and letting
+                        them be implicitly stitched together when the coords
+                        are used to generate a path.
+                        If list, the nth entry specifies by how much the nth
+                        half of the spiral (imagining the spiral divided along
+                        the y axis) is shifted. The segments corresponding to
+                        the 0th entry are those in the first FULL half and the
+                        segment before the first full half, if there exists
+                        one. E.g., if the spiral's innermost segment is in 
+                        quadrant 0, and the spiral unwinds in the counter-
+                        clockwise direction, then the first three segments
+                        will be shifted as specified by the 0th entry in 
+                        'horizontal' (i.e., the segments in quadrants 0, 1, 2),
+                        but if the spiral started in quadrant 1, only the
+                        firt two segments (in quadrants 1, 2) would be shifted
+                        by the 0th entry, as usual.
                         If more values are supplied than turns, the list will
                         simply be truncated. If fewer values are supplied than
                         turns, the function will raise an exception.
@@ -1696,7 +1860,7 @@ def arithmetic_spiral_extension(coords, vertical, horizontal, quad_shift=0,
                             by half the value passed in 'horizontal', so that
                             the total length of the extensions is the value 
                             of 'horizontal'. NOTE: if an array of non-
-                            identical values is passed in 'horiztonal', then
+                            identical values is passed in 'horizontal', then
                             at the straight extension on the interface across
                             which we proceed to the next element of the array,
                             the two spiral segments will be shifted by
@@ -1705,7 +1869,7 @@ def arithmetic_spiral_extension(coords, vertical, horizontal, quad_shift=0,
                             former by the (i - 1)th element, and thus the
                             straight segment at such an interface will not
                             have a length of horizontal[i], but of
-                            (horiztonal[i] + horizontal[i - 1]) / 2.
+                            (horizontal[i] + horizontal[i - 1]) / 2.
 
         shift:          In the event that the parameters above do not 
                         provide enough generality for the sorts of lateral 
@@ -1713,7 +1877,7 @@ def arithmetic_spiral_extension(coords, vertical, horizontal, quad_shift=0,
                         user may pass their own 3 dimensional ndarray to
                         'shift'. If shift is None, then it is constructed
                         from the other arguments. For example, when both
-                        vertical and horiztonal extension modes are 'symmetric',
+                        vertical and horizontal extension modes are 'symmetric',
                         the 'shift' array generated looks like this:
 
                             shift = np.array([
@@ -1768,7 +1932,6 @@ def arithmetic_spiral_extension(coords, vertical, horizontal, quad_shift=0,
             horizontal = np.full(total_turns, horizontal, np.float)
 
         if vertical_mode == 'symmetric':
-            # TODO: handle off-by-one error with symmetric extensions
             vertical_shifts = np.array([
                  vertical / 2,                  # quadrant 0
                  vertical / 2,                  # quadrant 1
@@ -1835,16 +1998,26 @@ def arithmetic_spiral_extension(coords, vertical, horizontal, quad_shift=0,
 
     # endif
 
-    # TODO: document start_quad, quad_shift, and the weird indexing introduced.
+    # Go through the list of lateral extensions in each direction an apply
+    # each one to the appropriate side of the appropriate turn of the spiral.
+    # These extensions are applied by shifting each segment of the spiral by 
+    # an amount specified by the corresponding entry in the array 'shift'.
     for idx, seg in enumerate(spiral_segs):
-        vert_turn = int((idx - start_quad + quad_shift) // 2)
-        hori_turn = int((idx - 1 - start_quad + quad_shift) // 2) 
-        if vert_turn < 0: vert_turn = 0
-        if hori_turn < 0: hori_turn = 0
+        # In this loop, as we iterate through the segments, we keep track of
+        # which quadrant the segment is in, and from the quadrant what side 
+        # of the x and y axes it is on, so we can determine when to apply the
+        # next value along the 2nd axis of the array 'shift'.
+        # We subtract the starting quadrant 'start_quad' so that both forward
+        # and reverse spirals have each extension applied in the same place.
+        # 
+        vert_half = int((idx - start_quad + quad_shift) // 2)
+        hori_half = int((idx - 1 - start_quad + quad_shift) // 2) 
+        if vert_half < 0: vert_half = 0
+        if hori_half < 0: hori_half = 0
 
         next_shift = np.array([
-            shift[quadrant, 0, hori_turn],
-            shift[quadrant, 1, vert_turn]
+            shift[quadrant, 0, hori_half],
+            shift[quadrant, 1, vert_half]
         ])
         # Translate this segment of the spiral appropriately
         spiral_segs[idx] = (seg.transpose() + next_shift).transpose()
@@ -1913,8 +2086,8 @@ def arithmetic_spiral_segments(coords):
     return spiral_segs
     
 
-def arithmetic_spiral_curve(turns, spacing, n_pts, start_turn=0, 
-    start_angle=0, end_angle=0, radial_shift=0):
+def arithmetic_spiral_curve(turns, spacing, n_pts=None, seg_length=seg_length,
+    radial_shift=0, start_turn=0, start_angle=0, end_angle=0):
     '''
     Generates an array of Cartesian coordinates defining an arithmetic (aka
     Archimedean) spiral. The range of angles in degrees over which it is 
@@ -1932,6 +2105,12 @@ def arithmetic_spiral_curve(turns, spacing, n_pts, start_turn=0,
 
         n_pts:          Number of points defining the spiral.
                         <int>
+
+        seg_length:     Gives the distance between the points defining the 
+                        spiral and sets n_pts appropriately.
+                        Only used if n_pts is None.
+                        <float or int>
+                        (default: constants.seg_length == 1.0)
 
         start_turn:     The turn of the spiral to start on. Must be a 
                         positive integer.
@@ -1957,13 +2136,20 @@ def arithmetic_spiral_curve(turns, spacing, n_pts, start_turn=0,
         First column x coords. Second column y coords.
         <2D np.ndarray>
     '''
-    if n_pts is None:
-        n_pts = 3000 # TODO actual calcualtion
+    b = spacing / (2 * np.pi)
+
     start_theta = ma.radians(360 * start_turn + start_angle)
     end_theta = start_theta + ma.radians(360 * turns + end_angle)
+
+    # if n_pts unspecified
+    if n_pts is None:
+        arc_length = arithmetic_spiral_alength(b, radial_shift, 
+            start_theta, end_theta)
+        n_pts = int(arc_length // seg_length)
+        
+    
     theta = np.linspace(start_theta, end_theta, n_pts)
 
-    b = spacing / (2 * np.pi)
     r = radial_shift + (b * theta)
 
     x, y = polar_to_rect(r, theta)
@@ -2859,15 +3045,6 @@ def path_ports(path):
     return [[port0_loc, port0_angle], [port1_loc, port1_angle]]
 
 
-def within_number(actual, nominal, tolerance):
-    '''
-    Checks wheter a number 'actual' is within 'tolerance' of a nominal value.
-    '''
-    lower_bound = nominal - tolerance
-    upper_bound = nominal + tolerance
-    return lower_bound <= actual and actual <= upper_bound
-
-
 def within_angle(actual, nominal, tolerance):
     '''
     Checks whether an angle 'acutal' is within 'tolerance' of a nominal angle
@@ -2889,6 +3066,11 @@ def within_angle(actual, nominal, tolerance):
 
 
 def arc_length(arr):
+    '''
+    Computes arc length of an ndarray representing cartesian coordinates
+    of shape (2, n). This is the sum of the straight line distances between
+    adjacent points.
+    '''
     alength = 0
     for i in range(arr.shape[1] - 1):
         alength += np.sqrt(np.sum(np.power(arr[:, i + 1] - arr[:, i], 2)))
