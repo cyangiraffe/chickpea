@@ -4,10 +4,10 @@
 #   round_path                      - wrapper around round path pcell.
 #   delay_spiral                    - generates a delay spiral with constant
 #                                     waveguide separation.
-#   parabolic_taper                 - generates a taper with a parabolic profile
-#   linear_taper                    - generates a taper with a linear profile
+#   parabolic_taper                 - generates a taper with parabolic profile
+#   linear_taper                    - generates a taper with linear profile
 #   s_bend(length, height)          - generates an s-bend, maximizing bend 
-#                                     radius for the specified length and height
+#                                     radius given length and height
 #   s_bend(bend_angle, bend_radius) - generates an s-bend with specified bend
 #                                     parameters
 #   s_bend(length, bend_radius)     - generates an s-bend with specified bend
@@ -57,7 +57,6 @@ from chickpea.constants import *
 from chickpea.transforms import null_trans
 
 
-
 def delay_spiral(layout, layer, cell, arc_length, min_spacing,
     alen_tolerance=0.1, radial_shift=0, 
     port0_side='left', port1_side='bottom', 
@@ -81,9 +80,9 @@ def delay_spiral(layout, layer, cell, arc_length, min_spacing,
     'alen_tolerance' of the passed 'arc_length'. This is done by
     computing the appropriate number of turns of the spiral and by adjusting
     the waveguide spacing constrained to a minimum of 'min_spacing' This
-    computation must be done numerically, since the equation for the arc length 
-    of an arithmetic spiral cannot be solved analytically for spacing. This
-    function uses these initial parameter values:
+    computation must be done numerically, since the equation for the arc 
+    length of an arithmetic spiral cannot be solved analytically for spacing. 
+    This function uses these initial parameter values:
         spacing b/w waveguide edges = min_spacing
         # of turns of each spiral   = 1
     The number of turns is then incremented until adding another turn would 
@@ -468,9 +467,9 @@ def delay_spiral_alen_tuning(arc_length, min_spacing,
     'alen_tolerance' of the passed 'arc_length'. This is done by
     computing the appropriate number of turns of the spiral and by adjusting
     the waveguide spacing constrained to a minimum of 'min_spacing' This
-    computation must be done numerically, since the equation for the arc length 
-    of an arithmetic spiral cannot be solved analytically for spacing. This
-    function uses these initial parameter values:
+    computation must be done numerically, since the equation for the arc  
+    length of an arithmetic spiral cannot be solved analytically for spacing. 
+    This function uses these initial parameter values:
         spacing b/w waveguide edges = min_spacing
         # of turns of each spiral   = 1
     The number of turns is then incremented until adding another turn would 
@@ -576,8 +575,8 @@ def delay_spiral_alen_tuning(arc_length, min_spacing,
                         quadrant 0, and the spiral unwinds in the counter-
                         clockwise direction, then the first three segments
                         will be shifted as specified by the 0th entry in 
-                        'horizontal' (i.e., the segments in quadrants 0, 1, 2),
-                        but if the spiral started in quadrant 1, only the
+                        'horizontal' (i.e., the segments in quadrants 0, 1,
+                        2), but if the spiral started in quadrant 1, only the
                         firt two segments (in quadrants 1, 2) would be shifted
                         by the 0th entry, as usual.
                         If more values are supplied than turns, the list will
@@ -969,8 +968,8 @@ def delay_spiral_geo(layout, layer, cell, turns, spacing, vertical=0,
                         quadrant 0, and the spiral unwinds in the counter-
                         clockwise direction, then the first three segments
                         will be shifted as specified by the 0th entry in 
-                        'horizontal' (i.e., the segments in quadrants 0, 1, 2),
-                        but if the spiral started in quadrant 1, only the
+                        'horizontal' (i.e., the segments in quadrants 0, 1,
+                        2), but if the spiral started in quadrant 1, only the
                         firt two segments (in quadrants 1, 2) would be shifted
                         by the 0th entry, as usual.
                         If more values are supplied than turns, the list will
@@ -1219,7 +1218,8 @@ def delay_spiral_geo(layout, layer, cell, turns, spacing, vertical=0,
     # Figure out which directions the inner terminations of the spiral are
     # facing so we can connect them with an appropriate s-bend
     fwd_first_segment = fwd_spiral_Dpoints[0] - fwd_spiral_Dpoints[1]
-    fwd_inner_port_angle = np.arctan2(fwd_first_segment.y, fwd_first_segment.x)
+    fwd_inner_port_angle = np.arctan2(
+        fwd_first_segment.y, fwd_first_segment.x)
     fwd_inner_port_angle = ma.degrees(fwd_inner_port_angle)
 
     # Get the innermost points of the forward and reverse spirals. These are
@@ -1278,8 +1278,10 @@ def delay_spiral_geo(layout, layer, cell, turns, spacing, vertical=0,
             "Values of 'origin' other than 'center' not yet supported.")
 
     # Generate the spiral arms as DPaths
-    fwd_spiral_path = pya.DPath(fwd_spiral_Dpoints, wg_width).transformed(trans)
-    rev_spiral_path = pya.DPath(rev_spiral_Dpoints, wg_width).transformed(trans)
+    fwd_spiral_path = pya.DPath(
+        fwd_spiral_Dpoints, wg_width).transformed(trans)
+    rev_spiral_path = pya.DPath(
+        rev_spiral_Dpoints, wg_width).transformed(trans)
 
     # Insert it all into the passed cell
     cell.shapes(layer).insert(fwd_spiral_path)
@@ -1352,8 +1354,8 @@ def delay_spiral_geo_alength(turns, spacing, vertical=0,
                         quadrant 0, and the spiral unwinds in the counter-
                         clockwise direction, then the first three segments
                         will be shifted as specified by the 0th entry in 
-                        'horizontal' (i.e., the segments in quadrants 0, 1, 2),
-                        but if the spiral started in quadrant 1, only the
+                        'horizontal' (i.e., the segments in quadrants 0, 1,
+                        2), but if the spiral started in quadrant 1, only the
                         firt two segments (in quadrants 1, 2) would be shifted
                         by the 0th entry, as usual.
                         If more values are supplied than turns, the list will
@@ -1774,8 +1776,8 @@ def arithmetic_spiral_extension(coords, vertical, horizontal, quad_shift=0,
                         quadrant 0, and the spiral unwinds in the counter-
                         clockwise direction, then the first three segments
                         will be shifted as specified by the 0th entry in 
-                        'horizontal' (i.e., the segments in quadrants 0, 1, 2),
-                        but if the spiral started in quadrant 1, only the
+                        'horizontal' (i.e., the segments in quadrants 0, 1,
+                        2), but if the spiral started in quadrant 1, only the
                         firt two segments (in quadrants 1, 2) would be shifted
                         by the 0th entry, as usual.
                         If more values are supplied than turns, the list will
@@ -1891,8 +1893,8 @@ def arithmetic_spiral_extension(coords, vertical, horizontal, quad_shift=0,
                         extensions the user woul like to implement, the 
                         user may pass their own 3 dimensional ndarray to
                         'shift'. If shift is None, then it is constructed
-                        from the other arguments. For example, when both
-                        vertical and horizontal extension modes are 'symmetric',
+                        from the other arguments. For example, when vertical
+                        and horizontal extension modes are both 'symmetric',
                         the 'shift' array generated looks like this:
 
                             shift = np.array([
@@ -2604,7 +2606,8 @@ def s_bend_solve_params(length, bend_radius, height, bend_angle):
     elif length is None and bend_angle is None:
         steep_bend = height > 2 * bend_radius
         if not steep_bend:
-            length, bend_angle = s_bend_solve_length_angle(height, bend_radius)
+            length, bend_angle = s_bend_solve_length_angle(height, 
+                                                           bend_radius)
 
     # The pair of parameters specified isn't supported, so raise an exception
     else:
@@ -2985,8 +2988,9 @@ def s_bend_double(layout, layer, wg_width=wg_width, bend_radius=bend_radius,
         trans=trans, output=output)
 
 
-def round_path(layout, layer, points, wg_width=wg_width, bend_radius=bend_radius, 
-    n_pts=None, seg_length=seg_length, trans=null_trans, output='pcell'):
+def round_path(layout, layer, points, wg_width=wg_width,  
+    bend_radius=bend_radius, n_pts=None, seg_length=seg_length, 
+    trans=null_trans, output='pcell'):
     '''
     Generates a rounded path PCell from the passed path.
 
@@ -3038,8 +3042,9 @@ def round_path(layout, layer, points, wg_width=wg_width, bend_radius=bend_radius
                         'path'              pya.DPath object w/ round corners
 
     Return:
-        The instantiated rounded path PCell.
-        <pya.DCellInstArray object>
+        The instantiated rounded path PCell or DPath, depending on the value
+        of 'output'.
+        <pya.DCellInstArray object or pya.DPath object>
 
     '''
     # Compute number of points to keep the distance bewteen points on the
@@ -3047,12 +3052,16 @@ def round_path(layout, layer, points, wg_width=wg_width, bend_radius=bend_radius
     if n_pts is None:
         n_pts = 2 * ma.pi * bend_radius / seg_length
 
+    dpoints = []
+
     # If elements of 'points' aren't DPoints, try to convert them.
     if isinstance(points[0], pya.DPoint) == False:
-        for point, idx in enumerate(points):
-            points[idx] = pya.DPoint(p[0], p[1])
+        for idx, point in enumerate(points):
+            dpoints.append(pya.DPoint(point[0], point[1]))
+    else:
+        dpoints = points
 
-    path = pya.DPath(points, wg_width)
+    path = pya.DPath(dpoints, wg_width)
 
     if output == 'pcell':
         basic_lib = pya.Library.library_by_name("Basic")
@@ -3066,7 +3075,8 @@ def round_path(layout, layer, points, wg_width=wg_width, bend_radius=bend_radius
             "npoints": n_pts
         }
 
-        pcell_idx = layout.add_pcell_variant(basic_lib, pcell_dec.id(), parameters)
+        pcell_idx = layout.add_pcell_variant(
+            basic_lib, pcell_dec.id(), parameters)
 
         pcell = pya.DCellInstArray(pcell_idx, trans)
 
@@ -3096,8 +3106,11 @@ def array_to_DPoints(arr):
 
 def path_ports(path):
     '''
-    Computes the locations and direction of the ports of a path
-    TODO: Need to test if this works
+    Computes the locations and direction of the ports of a path, not
+    accounting for any transformations applied to that path. Note that 
+    if a pya.Path object is passed, the coordinates will be given in 
+    database units, and if a pya.DPath object is passed, they will be given
+    in microns.
     '''
     dpts = list(path.each_point())
 
