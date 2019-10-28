@@ -22,27 +22,40 @@
 #   Julian Sanders  05 Jul 2019 Updated for package name change to
 #                               'chickpea' and added generation of
 #                               3D FDTD script.
+#   Julian Sanders  13 Jul 2019 Updated for changes to the coupler's 
+#                               arm parametrization.
+#   Julian Sanders  27 Oct 2019 Added instructive comments
 
 import pya    # Module containing KLayout API
-from chickpea import couplers
+#from chickpea import couplers
 from chickpea import paths
+from chickpea import my_constants
 
 # For debugging chickpea without exiting KLayout
 from importlib import reload
-reload(couplers)
+#reload(couplers)
 reload(paths)
+reload(my_constants)
 
 layout = pya.Layout()               # create new layout
 top = layout.create_cell("TOP")     # create top-level cell
 rib = layout.layer(1, 0)            # create rib waveguide layer
 
-bend = paths.s_bend(layout, bend_radius=30, bend_angle=1e-6, seg_length=0.1)
-print(paths.s_bend_path_length(bend_radius=30, bend_angle=1e-6))
-print(bend.length())
+# Generate a taper with a linear profile
+lin_taper = paths.linear_taper(layout, 
+  0.5,    # left side of the taper is 0.5 um wide
+  0.2,    # right side of the tpaer is 0.2 um wide
+  10      # taper is 10 um long
+)
 
-top.shapes(rib).insert(bend)
+# Shift the linear taper up by 20 um
+lin_taper = lin_taper.transformed(pya.DTrans(pya.DPoint(0, 20)))
 
-layout.write("C:/Users/julli/OneDrive - " 
-   + "California Institute of Technology/"
-   + "Research/gds_models/dir_couplers/shallow_bend.gds")</text>
+para_taper = paths.parabolic_taper(layout, 0.5, 10, 40, origin='port1')
+
+top.shapes(rib).insert(lin_taper)
+top.shapes(rib).insert(para_taper)
+
+layout.write(my_constants.gds_models_path
+  + "edge_couplers/test_taper.gds")</text>
 </klayout-macro>

@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="utf-8"?>
+<klayout-macro>
+ <description/>
+ <version/>
+ <category>pymacros</category>
+ <prolog/>
+ <epilog/>
+ <doc/>
+ <autorun>false</autorun>
+ <autorun-early>false</autorun-early>
+ <shortcut/>
+ <show-in-menu>false</show-in-menu>
+ <group-name/>
+ <menu-path/>
+ <interpreter>python</interpreter>
+ <dsl-interpreter-name/>
+ <text># This script tests the auto-routing features of CHICkpea.
+
+import pya    # Module containing KLayout API
+import numpy as np
+from chickpea import routing		# autorouting module
+from chickpea import paths			# path/waveguide generating module
+from chickpea import my_constants	# personal constants
+
+# For debugging chickpea without exiting KLayout
+from importlib import reload
+reload(routing)
+reload(paths)
+
+layout = pya.Layout()                       # create new layout
+top = layout.create_cell("TOP")             # create top-level cell
+rib = layout.layer(1, 0)                    # create strip waveguide layer
+
+inputs = [4, 3, 2, 1, 0]        # dense and evenly-spaced input ports
+
+outputs = [70, 60, 58, 56, 50]  # sparse, varyingly spaced output ports
+
+# Generate the list of paths connecting the ports
+routes = routing.parallel_route(layout, rib, inputs, outputs, 'x')
+
+# Insert each of the paths into the top cell.
+for route in routes:
+  top.insert(route)
+
+# I have my GDS files output into a folder whose path is contained in
+# the variable 'my_constants.gds_models_path', which I set by creating a
+# file called 'my_constants' in the 'chickpea' directory. This file doesn't
+# come with the cloned version from the github, but you can make your
+# own and fill it with personal convenience constants like this one, and
+# the Git repo won't track files with the name 'my_constants.py'.
+layout.write(my_constants.gds_models_path + 'test_route.gds')</text>
+</klayout-macro>

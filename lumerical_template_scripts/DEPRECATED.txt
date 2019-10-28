@@ -1,0 +1,7 @@
+This file contained some files that would act as templates for 
+automatically generating scripts that would set up a Lumerical
+simulation that a correspondingly generated directional coupler
+GDS could be inserted into. As the direcitonal coupler
+generating functions have been updated, these scripts fell
+behind, and the use case is limited enough that I don't 
+intend on ever updating the functions that use these tempaltes.

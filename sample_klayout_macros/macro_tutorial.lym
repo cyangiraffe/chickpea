@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="utf-8"?>
+<klayout-macro>
+ <description/>
+ <version/>
+ <category>pymacros</category>
+ <prolog/>
+ <epilog/>
+ <doc/>
+ <autorun>false</autorun>
+ <autorun-early>false</autorun-early>
+ <shortcut/>
+ <show-in-menu>false</show-in-menu>
+ <group-name/>
+ <menu-path/>
+ <interpreter>python</interpreter>
+ <dsl-interpreter-name/>
+ <text># This is an example script for some of the basic features of the KLayout API.
+# In it, new layout is generated and populated with an array of unit squares,
+# a 2 x 10 micron rectangle, a path with rounded corners, and a grating coupler
+# imported from another GDS file.
+#
+# Revision History:
+#   Craig Ives      the past... Initial revision
+#   Julian Sanders  25 Jun 2019 Added comments to make file tutorial-like
+#                               and changed corner rounding to use round_corners
+#                               rather than calling the round path PCell.
+#   Julian Sanders  26 Jun 2019 Testing numpy
+
+import pya          # Module containing KLayout API
+import numpy as np  # As of recently, KLayout's python has numpy bulit in!
+
+layout = pya.Layout()               # create new layout
+top = layout.create_cell("TOP")     # create top-level cell
+unit = layout.create_cell("UNIT")   # create cell for array of squares
+layer1 = layout.layer(1, 0)         # create a layer on GDS layer 1/0
+top.shapes(layer1).insert(pya.DBox(0, 0, 10, 2))  # long box in top-level cell
+unit.shapes(layer1).insert(pya.DBox(0, 0, 1, 1))  # unit square in 'unit' cell
+
+t = pya.DTrans(pya.DVector(0, 5))   # transformation object for 5 microns up
+
+# instantiate the cell 'unit' as an array of itself, with the array translated
+# up by 5 microns relative to 
+test_array = pya.DCellInstArray(
+  unit.cell_index(),  # instantiate the 'unit' cell by passing its index
+  t,                  # apply transformation 't' to entire array
+  pya.DVector(10, 0), # displacement vector defining array
+  pya.DVector(0, 20), # displacement vector defining array
+  5,                  # no. of unit instances in dir'n of DVector(10,0)
+  5                   # no. of unit instences in dir'n of DVector(0,20)
+)
+top.insert(test_array)  # insert the array into the layout
+
+#
+# Generate a path with rounded corners
+#
+
+# Generate the path with Manahattan routing and square corners first
+p1 = []
+path_points = np.array([   # list of points in path
+  [0,0],
+  [-10,0],
+  [-10,10],
+  [-20,10]
+]).astype(float)  # need floats if converting to DPoints
+
+for p in path_points: # convert point locations to KLayout API's "DPoint"s
+  p1.append(pya.DPoint(p[0], p[1]))
+
+path_manhattan = pya.DPath(p1, 0.5)  # Define a path by these points
+
+# Round the path corners
+path_round = path_manhattan.round_corners(
+  5,           # radius
+  50,          # number of points (per full circle)
+  layout.dbu   # accuracy of approximation
+)
+
+top.shapes(layer1).insert(path_round)
+
+# Generate a copy of path_round flipped across the y axis and shifted left 40 um
+flip_shift = pya.DTrans(pya.DTrans.M90, -40, 0) 
+path2 = path_round.transformed(flip_shift)
+top.shapes(layer1).insert(path2)
+
+#
+# Insert a grating coupler from 'GC_input.GDS' into the current layout
+#
+
+# path to grating coupler gds
+gc_path = "C:/Users/julli/AppData/Roaming/KLayout/GC_input.GDS" 
+layout.read(gc_path)
+gc_t = pya.DTrans(pya.DVector(0,20))
+top.insert(pya.DCellInstArray(  # insert the grating coupler into the top cell
+  layout.cells() - 1,   # assign next cell index (minus one since zero-indexed)
+  gc_t                  # translate the grating coupler
+))
+
+# Write the layout we've worked on to a file "test.gds". This will appear
+# in the KLayout installation directory.
+layout.write("test.gds")</text>
+</klayout-macro>

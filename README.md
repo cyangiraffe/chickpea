@@ -4,11 +4,15 @@
 The _Caltech Holisitic Integrated Circuits KLayout Photonic Element 
 Autogenerator_ (chickpea) is a python package that can be imported into a
 python-based KLayout macro from which functions can be called that will
-generate various photonic devices. 
+generate various photonic devices. The value of the package lies in that 
+functional parameters of the device are passed to the generating function,
+and the 
 
+## Dependencies
+This package needs a version of KLayout that has numpy built in. Versions
+0.25 and 0.26 have both been verified to work with chickpea.
 
 ## Installation
-
 Clone the chickpea directory into the directory 
 
     C:\Users\[user name]\AppData\Roaming\KLayout\python
@@ -17,73 +21,69 @@ The name 'chickpea' can then be used to import the python package into
 any python-based KLayout macro.
 
 
-## Use and example script
+## Primary Features
+* N-to-N parallel port auto-routing
+* Delay spirals
+* Directional Couplers
+* Parabolic and linear tapers
+* S-bends
 
-Here is an example script that generates a directional coupler for testing
-in lumerical FDTD. Note the import statements at the top of the file
+
+## Use and example script
+Here is an example script that generates a directional coupler. 
+Note the import statements at the top of the file
 using this folder name. There, we import a sub-module (corresponding to .py
 files inside the folder) called 'couplers', which includes the function we 
 want to generate a directional coupler with.
 
 ```python
 # This script generates a directional coupler.
-#
-# Revision History:
-#   Julian Sanders  25 Jun 2019 Initial Revision
-#   Julian Sanders  28 Jun 2019 Debugging
-#   Julian Sanders  05 Jul 2019 Updated for package name change to
-#                               'chickpea' and added generation of
-#                               3D FDTD script.
-#   Julian Sanders  13 Jul 2019 Updated for changes to the coupler's 
-#                               arm parametrization.
 
 import pya    # Module containing KLayout API
-from chickpea import couplers
-from chickpea import paths
-
-# For debugging chickpea without exiting KLayout
-from importlib import reload
-reload(couplers)
-reload(paths)
+from chickpea import couplers   # contains directional coupler generation
+from chickpea import paths      # path/waveguide generation
 
 layout = pya.Layout()               # create new layout
 top = layout.create_cell("TOP")     # create top-level cell
+dc  = layout.create_cell("dc")      # create cell for a dir'nal coupler
 rib = layout.layer(1, 0)            # create rib waveguide layer
 
-length_3dB = 16.23  # coupling length
 
-# Specify the length and height of each s-bend arm of the 
-# coupler individually. The largest possible bend radius
-# for the given length and height specifications will be used.
-arm_lengths = {
-  'lower left': 20,
-  'upper right': 60,
-  'lower right': 20,
-  'upper left': 10
-}
+couplers.dir_coupler(layout, rib, 
+  dc,   # place the entire coupler in the cell 'dc'
+  10,   # set the coupling length to 10 um
+  20,   # make all s-bend arm lengths 20 um
+  10,   # make all s-bend arm heights 10 um
+  sbend_output='pcell'  # Have the s-bends output as PCells
+)
 
-arm_heights = {
-  'lower left': 5,
-  'upper right': 52,
-  'lower right': 2,
-  'upper left': 30
-}
+# Insert the cell 'dc', which contains the directional coupler,
+# into the top cell of our layout.
+top.insert(pya.DCellInstArray(
+  dc.cell_index(),
+  pya.DTrans(pya.DVector(-20, 70))  # Shift away from first coupler
+))
 
-# Note: to make all arms the same, just make 'arm_lengths'
-# and 'arm_heights' scalars.
-
-# Generate the directional coupler
-couplers.dir_coupler(layout, 'divide', rib, length_3dB,
-  arm_lengths, arm_heights, seg_length=0.2)
-
-# Print the device's length, height, and port coordinates
-print(couplers.dir_coupler_length(length_3dB, arm_x))
-print(couplers.dir_coupler_height(arm_heights=arm_y, sep=0.2))
-print(couplers.dir_coupler_ports(length_3dB, arm_lengths=arm_x, 
-  arm_heights=arm_y, sep=0.2))
-
-
-layout.write("C:/Users/julli/OneDrive - " 
-   + "California Institute of Technology/"
-   + "CHIC/gds_models/dir_couplers/dir_coupler_3dB.gds")
+# Write the layout to a GDS file at this path
+layout.write("C:/Users/julli/Desktop/dir_coupler.gds")
 ```
+
+
+## Troubleshooting
+
+* DLL load failed: The specified module could not be found.
+  If KLayout gives this message when attempting to run a macro that uses
+  chickpea, followed by messages indicating it can't find numpy, close
+  KLayout and open it via the start menu/taskbar/equivalent, NOT by double
+  clicking on a GDS file. It KLayout is opened the latter way, it seems it
+  won't load numpy properly. Bug present in KLayout v. 0.26
+
+## Releases
+
+### Version 1.0
+This is the first public release of chickpea. The major features follow:
+* N-to-N parallel port auto-routing
+* Delay spirals
+* Directional Couplers
+* Parabolic and linear tapers
+* S-bends

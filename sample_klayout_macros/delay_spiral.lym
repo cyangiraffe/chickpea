@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="utf-8"?>
+<klayout-macro>
+ <description/>
+ <version/>
+ <category>pymacros</category>
+ <prolog/>
+ <epilog/>
+ <doc/>
+ <autorun>false</autorun>
+ <autorun-early>false</autorun-early>
+ <shortcut/>
+ <show-in-menu>false</show-in-menu>
+ <group-name/>
+ <menu-path/>
+ <interpreter>python</interpreter>
+ <dsl-interpreter-name/>
+ <text>import pya    # Module containing KLayout API
+import numpy as np
+from chickpea import paths          # path/waveguide generating module
+from chickpea import my_constants   # personal constants
+
+# For debugging chickpea without exiting KLayout
+from importlib import reload
+reload(paths)
+
+layout = pya.Layout()                       # create new layout
+top = layout.create_cell("TOP")             # create top-level cell
+gsp = layout.create_cell("geo_spiral")      # create cell for a delay spiral
+psp = layout.create_cell("plength_spiral")  # create cell for another spiral
+rib = layout.layer(1, 0)                    # create strip waveguide layer
+
+horizontal = np.concatenate((
+  np.array([1, 4, 4, 4, 8]),
+  np.full(6, 8)))   # Pad to total length 9 with 8's 
+
+vertical = np.concatenate((
+  np.array([16, 20, 20, 20, 24]),
+  np.full(6, 24)))  # Pad to total length 9 with 24's
+
+# Generate the spiral geometrically and instantiate its cell
+paths.delay_spiral_geo(layout, rib, gsp, 
+  turns=4,                      # Turn in each arm of the spiral
+  spacing=2.0,                  # Spacing between waveguide edges
+  vertical=vertical,            # Adds vertical spacing b/w turns
+  horizontal=horizontal,        # Adds horizontal spacing b/w turns
+  horizontal_mode='symmetric',  # Add the extra spacing symmetrically
+  vertical_mode='symmetric',    #   in both directions
+  quad_shift=0,                 # Where to start applying extra spacing
+  start_turn=1,                 # Determine the smallest theta to supply
+  start_angle=0,                #   to the spiral eqn. r = b * theta + a
+  radial_shift=4.80,            # Determines the 'a' in the spiral eqn.
+  n_pts=5000)                   # Number of points per spiral arm.
+  
+top.insert(pya.DCellInstArray(
+  gsp.cell_index(),
+  pya.DTrans(pya.DVector(0, 40))
+))
+
+
+# Generate the spiral specifying path length directly and instantiate its cell
+actual_length = paths.delay_spiral(layout, rib, psp, 
+  arc_length=1000,        # Length along the spine of the spiral path
+  min_spacing=2.0,        # Minimum spacing between waveguide edges
+  radial_shift=1.5,       # Shifts spiral out, making room for center s-bend
+  port1_side='bottom',    # Places port 1 on the bottom side of the spiral
+  port0_side='left',      # Places port 0 on the left side of the spiral
+  vertical=horizontal,    # 'vertical' and 'horizontal have the same meanings
+  horizontal=vertical,    #   as in delay_spiral_geo.
+  horizontal_mode='left', # Extra horizontal spacing applied only on left side
+  vertical_mode='top',    # Extra verical spacing applied only on the top side
+  quad_shift=0,           # Same as before
+  alen_tolerance=0.01,    # The actual arc length will be w/in 0.01 um of 1000 um
+  verbose=True,           # Print concise updates as the arc length is iteratively
+  garrulous=False,        #   tuned, but omit some nitty-gritty details.
+  sbend_output='path'     # Output the central s-bend as a DPath, not a PCell.
+)
+  
+top.insert(pya.DCellInstArray(
+  psp.cell_index(),
+  pya.DTrans(pya.DVector(0, -40))
+))
+
+# I have my GDS files output into a folder whose path is contained in
+# the variable 'my_constants.gds_models_path', which I set by creating a
+# file called 'my_constants' in the 'chickpea' directory. This file doesn't
+# come with the cloned version from the github, but you can make your
+# own and fill it with personal convenience constants like this one, and
+# the Git repo won't track files with the name 'my_constants.py'.
+layout.write(my_constants.gds_models_path + 'test_spiral.gds')</text>
+</klayout-macro>

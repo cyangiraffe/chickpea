@@ -46,6 +46,7 @@ from chickpea.constants import *
 from chickpea import paths
 from chickpea.transforms import null_trans
 import os.path
+import warnings
 
 #
 # Local constants
@@ -232,6 +233,7 @@ def dir_coupler(layout, layer, cell, coupling_length, arm_lengths=16,
             cell.shapes(layer).insert(straight2)
 
     return
+
 
 def dir_coupler_path(layout, layer, coupling_length, sep=sep, arm_lengths=16,
     arm_heights=8, wg_width=wg_width, seg_length=seg_length, n_pts='auto', 
@@ -742,75 +744,10 @@ def dir_coupler_ports(coupling_length, arm_lengths=16, arm_heights=8, sep=sep,
     return ports
 
 
-def dir_coupler_varfdtd(save_path, gds_path, coupling_length, sep=sep,  
-    wg_width=wg_width, bend_radius=bend_radius):
-    '''
-    THIS FUNCTION IS OUT OF DATE. No guarantees it'll work.
-
-    This function generates a lumerical script file that will set up a varFDTD
-    simulation for the directional coupler generated with 'dir_coupler' when
-    passed arguemnts 'coupling_length', 'sep', 'wg_width', and 'bend_radius'. The
-    script file is saved to the passed directory 'save_path'.
-
-    Args:
-        save_path:      Path to which the generated script file is saved, 
-                        including file name. If just a file name is passed, 
-                        the file might get saved to the KLayout installation 
-                        directory, though I'm not sure.
-                        <str>
-
-        gds_path:       Path to the GDS of the directional coupler to simulate.
-                        <str>
-
-        coupling_length: Length of the straight waveguides 
-                        separated by the distance 'sep'.
-                        <float>
-
-        sep:            Distance between edges of waveguides in the straight 
-                        section of the coupler. I.e., min oxide thickness
-                        between the waveguides.
-                        <float>
-                        (default: 0.2)
-
-        wg_width:       Width of the path
-                        <float>
-                        (default: constants.wg_width == 0.5)
-
-        bend_radius:    Radius of corner arcs
-                        <float>
-                        (default: constants.bend_radius == 10.0)
-    '''
-    template_path = os.path.abspath(
-        'python\\chickpea\\lumerical_template_scripts'
-        '\\varfdtd_setup_dir_coupler.lsf')
-
-    # Clear contents of old script, if one exists
-    with open(save_path, 'w') as old_script:
-        old_script.write('')
-
-    # Clear contents of old script, if one exists
-    with open(save_path, 'w') as old_script:
-        old_script.write('')
-
-    # Transcribe and fill in template to script line-by-line
-    with open(template_path, 'r') as template:
-        with open(save_path, 'a') as script:
-            for line in template:
-                formatted_line = line.format(
-                    gds_path=gds_path,
-                    bend_radius=bend_radius,
-                    sep=sep,
-                    length=coupling_length,
-                    wg_width=wg_width)
-
-                script.write(formatted_line)
-    return
-
-
 def dir_coupler_fdtd(save_path, gds_path, coupling_length, sep=sep,  
     wg_width=wg_width, bend_radius=bend_radius):
     '''
-    THIS FUNCTION IS OUT OF DATE. It will only work for the special case in
+    THIS FUNCTION IS DEPRECATED. It may still work for the special case in
     which all directional coupler arms are the same length and height, and
     height == length. The bend radius will then just be length / 2, which can
     be supplied as the bend_raidus argument to this function. The rest of the
@@ -849,6 +786,10 @@ def dir_coupler_fdtd(save_path, gds_path, coupling_length, sep=sep,
                         <float>
                         (default: constants.bend_radius == 10.0)
     '''
+    warnings.warn(DeprecationWarning(
+        "This function is no longer updated, and will likely be removed "
+        "in future versions of the software. See the docstring."))
+
     template_path = os.path.abspath(
         'python\\chickpea\\lumerical_template_scripts'
         '\\fdtd_setup_dir_coupler.lsf')

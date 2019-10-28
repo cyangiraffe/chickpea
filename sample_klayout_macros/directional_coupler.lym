@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="utf-8"?>
+<klayout-macro>
+ <description/>
+ <version/>
+ <category>pymacros</category>
+ <prolog/>
+ <epilog/>
+ <doc/>
+ <autorun>false</autorun>
+ <autorun-early>false</autorun-early>
+ <shortcut/>
+ <show-in-menu>false</show-in-menu>
+ <group-name/>
+ <menu-path/>
+ <interpreter>python</interpreter>
+ <dsl-interpreter-name/>
+ <text># This script generates a directional coupler.
+#
+# Revision History:
+#   Julian Sanders  25 Jun 2019 Initial Revision
+#   Julian Sanders  28 Jun 2019 Debugging
+#   Julian Sanders  05 Jul 2019 Updated for package name change to
+#                               'chickpea' and added generation of
+#                               3D FDTD script.
+#   Julian Sanders  13 Jul 2019 Updated for changes to the coupler's 
+#                               arm parametrization.
+#   Julian Sanders  27 Oct 2019 Added instructive comments
+
+import pya    # Module containing KLayout API
+from chickpea import couplers   # contains directional coupler generation
+from chickpea import paths      # path/waveguide generation
+
+# For debugging chickpea without exiting KLayout
+from importlib import reload
+reload(couplers)
+reload(paths)
+
+layout = pya.Layout()               # create new layout
+top = layout.create_cell("TOP")     # create top-level cell
+dc  = layout.create_cell("dc")      # create cell for a dir'nal coupler
+rib = layout.layer(1, 0)            # create rib waveguide layer
+
+length_3dB = 16.23  # 3dB coupling length
+
+# Specify the length and height of each s-bend arm of the 
+# coupler individually. The largest possible bend radius
+# for the given length and height specifications will be used.
+arm_lengths = {
+  'lower left':  0,
+  'upper right': 60,
+  'lower right': 10,
+  'upper left':  9
+}
+
+arm_heights = {
+  'lower left':  20,
+  'upper right': 52,
+  'lower right': 25,
+  'upper left':  30
+}
+
+# Generate the directional coupler automatically divided
+# into 6 cells. This is convenient for importing the
+# resulting GDS into lumerical.
+couplers.dir_coupler(layout, rib, 
+  'divide',           # automatically divide the coupler between cells
+  length_3dB,         # set the coupling length so that it's a 3dB coupler
+  arm_lengths,        # Individual specify dimensions of each s-bend
+  arm_heights, 
+  seg_length=0.2,     # 0.2 um b/w points defining the s-bends
+  sbend_output='path' # Have the s-bends output as DPaths
+)
+  
+
+couplers.dir_coupler(layout, rib, 
+  dc,   # place the entire coupler in the cell 'dc'
+  10,   # set the coupling length to 10 um
+  20,   # make all s-bend arm lengths 20 um
+  10,   # make all s-bend arm heights 10 um
+  sbend_output='pcell'  # Have the s-bends output as PCells
+)
+
+# Insert the cell 'dc', which contains the latter directional coupler,
+# into the top cell of our layout.
+top.insert(pya.DCellInstArray(
+  dc.cell_index(),
+  pya.DTrans(pya.DVector(-20, 70))  # Shift away from first coupler
+))
+
+# Print the first coupler's length, height, center coordinate, 
+# and port coordinates.
+print(couplers.dir_coupler_length(length_3dB, arm_lengths))
+print(couplers.dir_coupler_height(arm_heights=arm_heights, sep=0.2))
+print(couplers.dir_coupler_center(length_3dB, arm_lengths=arm_lengths, 
+  arm_heights=arm_heights, sep=0.2))
+print(couplers.dir_coupler_ports(length_3dB, arm_lengths=arm_lengths, 
+  arm_heights=arm_heights, sep=0.2))
+
+
+layout.write("C:/Users/julli/OneDrive - " 
+   + "California Institute of Technology/"
+   + "CHIC/gds_models/dir_couplers/test_dir_coupler.gds")</text>
+</klayout-macro>
