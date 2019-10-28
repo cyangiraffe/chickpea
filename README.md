@@ -68,6 +68,24 @@ top.insert(pya.DCellInstArray(
 layout.write("C:/Users/julli/Desktop/dir_coupler.gds")
 ```
 
+## Learning the Package
+* There's a subdirectory within chickpea called "example_scripts", which
+  contains example KLayout macro scripts using the functions provided by
+  chickpea, along with the GDS files that each of those macros generate.
+
+* At the top of the .py files in the package, there is a list of "top level
+  functions" that briefly list and describe the functions in that file that
+  might be used in a macro script (as opposed to the helper functions in 
+  that file, which are only used within the chickpea package). From those
+  names, you can either ctrl+F the files or use python's help() function to
+  read the function docstrings for detailed reference documentation on each
+  function. This may contain details the example scripts don't.
+
+* There is also a subdirectory called "user_manual". Right now, it just
+  contains some examples of the outputs of various parameter sets supplied
+  to the delay spiral function, and in the future may contain information
+  on the geometry involved in the package's various functions.
+
 
 ## Troubleshooting
 
