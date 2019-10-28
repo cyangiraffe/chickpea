@@ -9,7 +9,7 @@ functional parameters of the device are passed to the generating function,
 and the 
 
 ## Dependencies
-This package needs a version of KLayout that has numpy built in. Versions
+This package needs a version of [KLayout](https://www.klayout.de/) that has numpy built in. Versions
 0.25 and 0.26 have both been verified to work with chickpea.
 
 ## Installation
