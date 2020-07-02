@@ -6,7 +6,7 @@ Autogenerator_ (chickpea) is a python package that can be imported into a
 python-based KLayout macro from which functions can be called that will
 generate various photonic devices. The value of the package lies in that 
 functional parameters of the device are passed to the generating function,
-and the 
+and the generating function produces the device layout.
 
 ## Dependencies
 This package needs a version of [KLayout](https://www.klayout.de/) that has numpy built in. Versions
